@@ -1,0 +1,38 @@
+## .NET / C#
+bin/
+obj/
+*.user
+*.suo
+.vs/
+publish/
+*.nupkg
+*.snupkg
+local.settings.json
+appsettings.Development.json
+
+## Docker
+.docker/
+
+## Angular / Node
+frontend/node_modules/
+frontend/dist/
+frontend/.angular/
+
+## IDEs
+.idea/
+*.DotSettings
+*.DotSettings.user
+
+## OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+## Logs
+*.log
+logs/
+
+## Environment
+.env
+.env.*
+!.env.example

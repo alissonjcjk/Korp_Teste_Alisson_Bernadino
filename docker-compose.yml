@@ -1,0 +1,94 @@
+name: korp-erp
+
+services:
+  # ── PostgreSQL Database ──────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: korp-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: korp_user
+      POSTGRES_PASSWORD: korp_pass
+      # O script de init criará ambos os bancos de dados
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infra/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U korp_user -d inventory_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - korp-network
+
+  # ── Inventory Microservice ───────────────────────────────────────────────────
+  inventory-service:
+    build:
+      context: ./services/inventory-service
+      dockerfile: Dockerfile
+    container_name: korp-inventory
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Docker
+      ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=inventory_db;Username=korp_user;Password=korp_pass"
+    ports:
+      - "5001:8080"
+    networks:
+      - korp-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  # ── Billing Microservice ─────────────────────────────────────────────────────
+  billing-service:
+    build:
+      context: ./services/billing-service
+      dockerfile: Dockerfile
+    container_name: korp-billing
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      inventory-service:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Docker
+      ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=billing_db;Username=korp_user;Password=korp_pass"
+      InventoryService__BaseUrl: "http://inventory-service:8080"
+    ports:
+      - "5002:8080"
+    networks:
+      - korp-network
+
+  # ── Angular Frontend ─────────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: korp-frontend
+    restart: unless-stopped
+    depends_on:
+      - billing-service
+      - inventory-service
+    ports:
+      - "4200:80"
+    networks:
+      - korp-network
+
+volumes:
+  postgres_data:
+    name: korp-postgres-data
+
+networks:
+  korp-network:
+    name: korp-network
+    driver: bridge
