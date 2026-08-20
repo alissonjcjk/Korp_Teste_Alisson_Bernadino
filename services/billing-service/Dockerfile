@@ -19,6 +19,9 @@ RUN dotnet publish ./src/BillingService.Api/BillingService.Api.csproj \
 FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS runtime
 WORKDIR /app
 
+# Instalar curl para healthcheck (executado como root antes de trocar usuário)
+RUN apt-get update && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/*
+
 # Usuário não-root por segurança
 RUN adduser --disabled-password --gecos "" --no-create-home appuser
 USER appuser
