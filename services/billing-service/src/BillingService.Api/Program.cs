@@ -2,6 +2,9 @@ using Microsoft.EntityFrameworkCore;
 using Serilog;
 using BillingService.Api.Data;
 using BillingService.Api.Services;
+using BillingService.Api.Clients;
+using BillingService.Api.Resilience;
+using BillingService.Api.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -52,6 +55,10 @@ builder.Services.AddHttpClient<IInventoryClient, InventoryClient>(client =>
 // ── Application Services ─────────────────────────────────────────────────────
 builder.Services.AddScoped<IInvoiceService, InvoiceService>();
 
+// ── Health Checks ────────────────────────────────────────────────────────────
+builder.Services.AddHealthChecks()
+    .AddDbContextCheck<BillingDbContext>(name: "postgres");
+
 // ── CORS ─────────────────────────────────────────────────────────────────────
 builder.Services.AddCors(options =>
 {
@@ -81,6 +88,7 @@ using (var scope = app.Services.CreateScope())
 }
 
 // ── Middleware Pipeline ───────────────────────────────────────────────────────
+app.UseGlobalExceptionHandler(); // Deve ser o primeiro middleware
 app.UseSerilogRequestLogging();
 
 if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Docker"))
@@ -96,5 +104,6 @@ if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Docker"))
 app.UseCors();
 app.UseAuthorization();
 app.MapControllers();
+app.MapHealthChecks("/health");
 
 app.Run();
