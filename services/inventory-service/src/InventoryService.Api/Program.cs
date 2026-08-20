@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Serilog;
 using InventoryService.Api.Data;
 using InventoryService.Api.Services;
+using InventoryService.Api.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -42,6 +43,10 @@ builder.Services.AddDbContext<InventoryDbContext>(options =>
 // ── Application Services ─────────────────────────────────────────────────────
 builder.Services.AddScoped<IProductService, ProductService>();
 
+// ── Health Checks ────────────────────────────────────────────────────────────
+builder.Services.AddHealthChecks()
+    .AddDbContextCheck<InventoryDbContext>(name: "postgres");
+
 // ── CORS ─────────────────────────────────────────────────────────────────────
 builder.Services.AddCors(options =>
 {
@@ -71,6 +76,7 @@ using (var scope = app.Services.CreateScope())
 }
 
 // ── Middleware Pipeline ───────────────────────────────────────────────────────
+app.UseGlobalExceptionHandler(); // Deve ser o primeiro middleware
 app.UseSerilogRequestLogging();
 
 if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Docker"))
@@ -86,5 +92,6 @@ if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Docker"))
 app.UseCors();
 app.UseAuthorization();
 app.MapControllers();
+app.MapHealthChecks("/health");
 
 app.Run();
