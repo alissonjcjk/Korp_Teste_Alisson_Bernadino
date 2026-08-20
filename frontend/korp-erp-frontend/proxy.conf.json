@@ -1,0 +1,16 @@
+{
+  "/api/inventory": {
+    "target": "http://localhost:5001",
+    "secure": false,
+    "pathRewrite": { "^/api/inventory": "/api" },
+    "changeOrigin": true,
+    "logLevel": "warn"
+  },
+  "/api/billing": {
+    "target": "http://localhost:5002",
+    "secure": false,
+    "pathRewrite": { "^/api/billing": "/api" },
+    "changeOrigin": true,
+    "logLevel": "warn"
+  }
+}
