@@ -6,11 +6,11 @@ namespace BillingService.Api.Exceptions;
 /// Exceção base do domínio de faturamento.
 /// Todas as exceções de negócio herdam desta.
 /// </summary>
-public abstract class DomainException : Exception
+public class DomainException : Exception
 {
     public int StatusCode { get; }
 
-    protected DomainException(string message, int statusCode = 400)
+    public DomainException(string message, int statusCode = 400)
         : base(message)
     {
         StatusCode = statusCode;
