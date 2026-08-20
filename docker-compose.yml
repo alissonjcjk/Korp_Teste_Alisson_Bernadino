@@ -70,19 +70,19 @@ services:
       - korp-network
 
   # ── Angular Frontend ─────────────────────────────────────────────────────────
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    container_name: korp-frontend
-    restart: unless-stopped
-    depends_on:
-      - billing-service
-      - inventory-service
-    ports:
-      - "4200:80"
-    networks:
-      - korp-network
+  # frontend:
+  #   build:
+  #     context: ./frontend
+  #     dockerfile: Dockerfile
+  #   container_name: korp-frontend
+  #   restart: unless-stopped
+  #   depends_on:
+  #     - billing-service
+  #     - inventory-service
+  #   ports:
+  #     - "4200:80"
+  #   networks:
+  #     - korp-network
 
 volumes:
   postgres_data:
