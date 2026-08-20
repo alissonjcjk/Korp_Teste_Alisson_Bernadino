@@ -1,0 +1,82 @@
+import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
+import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
+import { ToastContainerComponent } from './shared/components/toast-container/toast-container.component';
+
+@Component({
+  selector: 'app-root',
+  standalone: true,
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, ToastContainerComponent],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: `
+    <div class="min-h-screen flex flex-col">
+
+      <!-- ── Navbar ── -->
+      <nav class="sticky top-0 z-40 border-b border-white/5"
+           style="background: rgba(2,6,23,0.85); backdrop-filter: blur(20px);">
+        <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+
+          <!-- Logo -->
+          <a routerLink="/" class="flex items-center gap-3 group">
+            <div class="w-8 h-8 rounded-lg bg-primary-600 flex items-center justify-center
+                        shadow-glow group-hover:shadow-glow-lg transition-all duration-300">
+              <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+            </div>
+            <span class="text-lg font-bold text-gradient">Korp ERP</span>
+          </a>
+
+          <!-- Nav Links -->
+          <div class="flex items-center gap-1">
+            <a routerLink="/produtos" routerLinkActive="nav-link-active"
+               class="nav-link px-4 py-2 rounded-lg text-sm font-medium text-surface-400
+                      hover:text-white hover:bg-white/5 transition-all duration-200 flex items-center gap-2">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+              </svg>
+              Produtos
+            </a>
+            <a routerLink="/notas-fiscais" routerLinkActive="nav-link-active"
+               class="nav-link px-4 py-2 rounded-lg text-sm font-medium text-surface-400
+                      hover:text-white hover:bg-white/5 transition-all duration-200 flex items-center gap-2">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+              </svg>
+              Notas Fiscais
+            </a>
+          </div>
+
+          <!-- Status Badge -->
+          <div class="flex items-center gap-2 text-xs text-surface-500">
+            <span class="w-2 h-2 rounded-full bg-success animate-pulse-slow"></span>
+            Sistema Online
+          </div>
+        </div>
+      </nav>
+
+      <!-- ── Main Content ── -->
+      <main class="flex-1 max-w-7xl w-full mx-auto px-6 py-8">
+        <router-outlet />
+      </main>
+
+      <!-- ── Footer ── -->
+      <footer class="border-t border-white/5 py-4 text-center text-xs text-surface-600">
+        Korp ERP &copy; {{ currentYear }} — Sistema de Emissão de Notas Fiscais
+      </footer>
+    </div>
+
+    <!-- ── Toast Container ── -->
+    <app-toast-container />
+  `,
+  styles: [`
+    .nav-link-active {
+      @apply text-white bg-white/10 !important;
+    }
+  `]
+})
+export class AppComponent {
+  readonly currentYear = new Date().getFullYear();
+}
