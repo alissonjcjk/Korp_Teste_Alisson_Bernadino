@@ -3,13 +3,12 @@ import {
   ChangeDetectionStrategy, inject
 } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder, Validators, AbstractControl } from '@angular/forms';
-import { NgIf } from '@angular/common';
 import { Product } from '../../models/product.model';
 
 @Component({
   selector: 'app-product-form-modal',
   standalone: true,
-  imports: [ReactiveFormsModule, NgIf],
+  imports: [ReactiveFormsModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <!-- Overlay -->

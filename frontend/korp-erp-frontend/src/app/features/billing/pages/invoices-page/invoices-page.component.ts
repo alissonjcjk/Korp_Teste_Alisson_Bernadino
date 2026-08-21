@@ -1,7 +1,7 @@
 import {
   Component, ChangeDetectionStrategy, inject, signal, computed, OnInit
 } from '@angular/core';
-import { NgClass, DecimalPipe, DatePipe, CurrencyPipe, NgIf } from '@angular/common';
+import { NgClass, DecimalPipe, DatePipe, CurrencyPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { InvoiceService } from '../../services/invoice.service';
 import { ToastService } from '../../../../core/services/toast.service';
@@ -11,7 +11,7 @@ import { InvoiceFormModalComponent } from '../../components/invoice-form-modal/i
 @Component({
   selector: 'app-invoices-page',
   standalone: true,
-  imports: [NgClass, DecimalPipe, DatePipe, CurrencyPipe, FormsModule, NgIf, InvoiceFormModalComponent],
+  imports: [NgClass, DecimalPipe, DatePipe, CurrencyPipe, FormsModule, InvoiceFormModalComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="animate-in">

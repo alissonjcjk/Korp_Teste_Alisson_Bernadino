@@ -3,6 +3,8 @@ using Serilog;
 using InventoryService.Api.Data;
 using InventoryService.Api.Services;
 using InventoryService.Api.Middleware;
+using FluentValidation;
+using FluentValidation.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,6 +19,8 @@ builder.Host.UseSerilog();
 
 // ── Services ─────────────────────────────────────────────────────────────────
 builder.Services.AddControllers();
+builder.Services.AddFluentValidationAutoValidation().AddFluentValidationClientsideAdapters();
+builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
