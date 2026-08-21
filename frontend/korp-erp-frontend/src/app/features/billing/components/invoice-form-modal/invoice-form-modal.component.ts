@@ -14,7 +14,7 @@ import { ToastService } from '../../../../core/services/toast.service';
 @Component({
   selector: 'app-invoice-form-modal',
   standalone: true,
-  imports: [ReactiveFormsModule, NgIf, NgFor, CurrencyPipe, DecimalPipe],
+  imports: [ReactiveFormsModule, CurrencyPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <!-- Overlay -->
@@ -192,10 +192,10 @@ export class InvoiceFormModalComponent implements OnInit {
   private toast = inject(ToastService);
 
   // Search State
-  private searchSubject = new Subject<{term: string, index: number}>();
+  private searchSubject = new Subject<{ term: string, index: number }>();
   productSearchResults = signal<Product[]>([]);
   focusedItemIndex = signal<number | null>(null);
-  
+
   // Track selected products to show their names in the input
   selectedProducts = signal<Record<number, Product>>({});
 
@@ -226,7 +226,7 @@ export class InvoiceFormModalComponent implements OnInit {
 
   // Custom validator for FormArray minimum length
   minLengthArray(min: number) {
-    return (c: AbstractControl): {[key: string]: any} | null => {
+    return (c: AbstractControl): { [key: string]: any } | null => {
       if (c.value.length >= min) return null;
       return { minItems: true };
     }
@@ -245,7 +245,7 @@ export class InvoiceFormModalComponent implements OnInit {
     this.itemsFormArray.removeAt(index);
     const updatedSelected = { ...this.selectedProducts() };
     delete updatedSelected[index];
-    
+
     // Shift selected products if needed
     const newSelected: Record<number, Product> = {};
     Object.keys(updatedSelected).forEach(key => {
@@ -261,18 +261,18 @@ export class InvoiceFormModalComponent implements OnInit {
 
   onSearchProduct(event: Event, index: number): void {
     const term = (event.target as HTMLInputElement).value;
-    
+
     // If they clear the input, clear the selected product for this index
     if (!term) {
       const itemControl = this.itemsFormArray.at(index);
       itemControl.patchValue({ productId: '', unitPrice: 0 });
-      
+
       const updated = { ...this.selectedProducts() };
       delete updated[index];
       this.selectedProducts.set(updated);
     }
-    
-    this.searchSubject.next({term, index});
+
+    this.searchSubject.next({ term, index });
   }
 
   selectProduct(product: Product, index: number): void {
@@ -285,7 +285,7 @@ export class InvoiceFormModalComponent implements OnInit {
     const updated = { ...this.selectedProducts() };
     updated[index] = product;
     this.selectedProducts.set(updated);
-    
+
     this.focusedItemIndex.set(null); // Close dropdown
   }
 
