@@ -1,7 +1,7 @@
 import {
   Component, ChangeDetectionStrategy, inject, signal, computed, OnInit
 } from '@angular/core';
-import { NgClass, DecimalPipe, DatePipe, CurrencyPipe } from '@angular/common';
+import { NgClass, DatePipe, CurrencyPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { InvoiceService } from '../../services/invoice.service';
 import { ToastService } from '../../../../core/services/toast.service';
@@ -11,7 +11,7 @@ import { InvoiceFormModalComponent } from '../../components/invoice-form-modal/i
 @Component({
   selector: 'app-invoices-page',
   standalone: true,
-  imports: [NgClass, DecimalPipe, DatePipe, CurrencyPipe, FormsModule, InvoiceFormModalComponent],
+  imports: [NgClass, DatePipe, CurrencyPipe, FormsModule, InvoiceFormModalComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="animate-in">
@@ -178,11 +178,11 @@ export class InvoicesPageComponent implements OnInit {
   private toast = inject(ToastService);
 
   // State
-  invoices   = signal<InvoiceSummaryResponse[]>([]);
-  loading    = signal(false);
-  saving     = signal(false);
+  invoices = signal<InvoiceSummaryResponse[]>([]);
+  loading = signal(false);
+  saving = signal(false);
   printingId = signal<string | null>(null);
-  showModal  = signal(false);
+  showModal = signal(false);
   searchTerm = '';
 
   // Computed
@@ -195,8 +195,8 @@ export class InvoicesPageComponent implements OnInit {
     );
   });
 
-  totalRevenue         = computed(() => this.invoices().filter(i => i.status !== 'Cancelled').reduce((acc, curr) => acc + curr.totalAmount, 0));
-  openInvoicesCount    = computed(() => this.invoices().filter(i => i.status === 'Open').length);
+  totalRevenue = computed(() => this.invoices().filter(i => i.status !== 'Cancelled').reduce((acc, curr) => acc + curr.totalAmount, 0));
+  openInvoicesCount = computed(() => this.invoices().filter(i => i.status === 'Open').length);
   printedInvoicesCount = computed(() => this.invoices().filter(i => i.status === 'Closed').length);
 
   ngOnInit(): void {
@@ -207,7 +207,7 @@ export class InvoicesPageComponent implements OnInit {
     this.loading.set(true);
     this.invoiceService.getAll().subscribe({
       next: invoices => { this.invoices.set(invoices); this.loading.set(false); },
-      error: ()      => { this.loading.set(false); }
+      error: () => { this.loading.set(false); }
     });
   }
 
@@ -240,7 +240,7 @@ export class InvoicesPageComponent implements OnInit {
     // Generate idempotency key
     const idempotencyKey = crypto.randomUUID();
     this.printingId.set(invoice.id);
-    
+
     this.invoiceService.print(invoice.id, idempotencyKey).subscribe({
       next: () => {
         this.toast.success(`NF #${invoice.invoiceNumber} impressa com sucesso!`, 'Impresso');
@@ -252,7 +252,7 @@ export class InvoicesPageComponent implements OnInit {
   }
 
   getStatusLabel(status: string): string {
-    switch(status) {
+    switch (status) {
       case 'Open': return 'Aberta';
       case 'Closed': return 'Fechada';
       case 'Cancelled': return 'Cancelada';
