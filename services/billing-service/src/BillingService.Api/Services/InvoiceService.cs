@@ -51,8 +51,15 @@ public class InvoiceService : IInvoiceService
         if (request.Items == null || !request.Items.Any())
             throw new InvoiceHasNoItemsException();
 
+        // Gera número sequencial da NF
+        var nextNumber = await _context.Invoices
+            .AnyAsync(ct)
+            ? await _context.Invoices.MaxAsync(i => i.InvoiceNumber, ct) + 1
+            : 1;
+
         var invoice = new Invoice
         {
+            InvoiceNumber = nextNumber,
             CustomerName = request.CustomerName?.Trim(),
             Notes = request.Notes?.Trim(),
             Status = InvoiceStatus.Open,
