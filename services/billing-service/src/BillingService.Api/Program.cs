@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using MassTransit;
 using Serilog;
 using BillingService.Api.Data;
 using BillingService.Api.Services;
@@ -58,6 +59,26 @@ builder.Services.AddHttpClient<IInventoryClient, InventoryClient>(client =>
 
 // ── Application Services ─────────────────────────────────────────────────────
 builder.Services.AddScoped<IInvoiceService, InvoiceService>();
+
+// ── MassTransit (RabbitMQ + EF Core Outbox) ────────────────────────────────
+builder.Services.AddMassTransit(x =>
+{
+    // Outbox Pattern: usa o BillingDbContext para persistir a mensagem
+    // atomicamente junto com o SaveChangesAsync da Nota Fiscal.
+    x.AddEntityFrameworkOutbox<BillingDbContext>(o =>
+    {
+        o.UsePostgres();
+        o.UseBusOutbox();
+    });
+
+    x.UsingRabbitMq((ctx, cfg) =>
+    {
+        cfg.Host(builder.Configuration.GetConnectionString("RabbitMq")
+            ?? "amqp://guest:guest@localhost:5672");
+
+        cfg.ConfigureEndpoints(ctx);
+    });
+});
 
 // ── Health Checks ────────────────────────────────────────────────────────────
 builder.Services.AddHealthChecks()

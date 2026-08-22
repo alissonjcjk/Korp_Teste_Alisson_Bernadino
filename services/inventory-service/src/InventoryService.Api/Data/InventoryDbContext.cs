@@ -1,3 +1,4 @@
+using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using InventoryService.Api.Models;
 
@@ -31,5 +32,12 @@ public class InventoryDbContext : DbContext
             entity.Property(p => p.StockBalance)
                   .HasPrecision(18, 4);
         });
+
+        // ── MassTransit Inbox/Outbox Tables ────────────────────────────────────────
+        // InboxState: garante idempotência no Consumer (evita dupla dedução).
+        // OutboxMessage/State: necessário pelo MassTransit EF mesmo no Consumer.
+        modelBuilder.AddInboxStateEntity();
+        modelBuilder.AddOutboxMessageEntity();
+        modelBuilder.AddOutboxStateEntity();
     }
 }
