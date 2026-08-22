@@ -1,7 +1,9 @@
 using Microsoft.EntityFrameworkCore;
+using MassTransit;
 using Serilog;
 using InventoryService.Api.Data;
 using InventoryService.Api.Services;
+using InventoryService.Api.Consumers;
 using InventoryService.Api.Middleware;
 using FluentValidation;
 using FluentValidation.AspNetCore;
@@ -46,6 +48,29 @@ builder.Services.AddDbContext<InventoryDbContext>(options =>
 
 // ── Application Services ─────────────────────────────────────────────────────
 builder.Services.AddScoped<IProductService, ProductService>();
+
+// ── MassTransit (RabbitMQ + EF Core Inbox/Outbox) ─────────────────────────
+// InvoicePrintedConsumer: processa eventos de impressão de NF e deduz estoque.
+// InboxState garante que a mesma mensagem não seja processada mais de uma vez.
+builder.Services.AddMassTransit(x =>
+{
+    // Inbox: garante idempotência no consumo (evita dupla dedução de estoque).
+    x.AddEntityFrameworkOutbox<InventoryDbContext>(o =>
+    {
+        o.UsePostgres();
+        o.UseBusOutbox();
+    });
+
+    x.AddConsumer<InvoicePrintedConsumer>();
+
+    x.UsingRabbitMq((ctx, cfg) =>
+    {
+        cfg.Host(builder.Configuration.GetConnectionString("RabbitMq")
+            ?? "amqp://guest:guest@localhost:5672");
+
+        cfg.ConfigureEndpoints(ctx);
+    });
+});
 
 // ── Health Checks ────────────────────────────────────────────────────────────
 builder.Services.AddHealthChecks()

@@ -1,3 +1,4 @@
+using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using BillingService.Api.Models;
 
@@ -45,5 +46,12 @@ public class BillingDbContext : DbContext
             // TotalPrice é calculado, não persiste na coluna diretamente
             entity.Ignore(ii => ii.TotalPrice);
         });
+
+        // ── MassTransit Outbox Tables ─────────────────────────────────────────────
+        // Estas tabelas garantem o Outbox Pattern: a mensagem é salva no banco
+        // na mesma transação da nota fiscal, e entregue ao RabbitMQ com garantia.
+        modelBuilder.AddInboxStateEntity();
+        modelBuilder.AddOutboxMessageEntity();
+        modelBuilder.AddOutboxStateEntity();
     }
 }

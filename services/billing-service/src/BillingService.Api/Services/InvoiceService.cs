@@ -1,9 +1,11 @@
+using MassTransit;
 using Microsoft.EntityFrameworkCore;
 using BillingService.Api.Data;
 using BillingService.Api.DTOs;
 using BillingService.Api.Exceptions;
 using BillingService.Api.Models;
 using BillingService.Api.Clients;
+using Korp.Shared.Events;
 
 namespace BillingService.Api.Services;
 
@@ -11,15 +13,18 @@ public class InvoiceService : IInvoiceService
 {
     private readonly BillingDbContext _context;
     private readonly IInventoryClient _inventoryClient;
+    private readonly IPublishEndpoint _publishEndpoint;
     private readonly ILogger<InvoiceService> _logger;
 
     public InvoiceService(
-        BillingDbContext context, 
+        BillingDbContext context,
         IInventoryClient inventoryClient,
+        IPublishEndpoint publishEndpoint,
         ILogger<InvoiceService> logger)
     {
         _context = context;
         _inventoryClient = inventoryClient;
+        _publishEndpoint = publishEndpoint;
         _logger = logger;
     }
 
@@ -130,20 +135,26 @@ public class InvoiceService : IInvoiceService
             throw new InvalidInvoiceStatusException(invoice.InvoiceNumber, invoice.Status);
         }
 
-        // Para cada item, tenta deduzir do estoque
-        foreach (var item in invoice.Items)
-        {
-            var stockResult = await _inventoryClient.DeductStockAsync(item.ProductId, item.Quantity, invoice.InvoiceNumber.ToString(), ct);
-            if (stockResult == null)
-            {
-                throw new DomainException($"Não foi possível deduzir estoque do produto {item.ProductId}.", 400);
-            }
-        }
 
+        // Muda status da nota para Fechada
         invoice.Status = InvoiceStatus.Closed;
         invoice.PrintedAt = DateTime.UtcNow;
         invoice.UpdatedAt = DateTime.UtcNow;
         invoice.IdempotencyKey = idempotencyKey;
+
+        // Monta o evento com os itens para dedução assíncrona de estoque
+        var invoiceEvent = new InvoicePrintedEvent(
+            InvoiceId: invoice.Id,
+            InvoiceNumber: invoice.InvoiceNumber.ToString(),
+            Items: invoice.Items
+                .Select(i => new InvoiceItemEvent(i.ProductId, i.Quantity))
+                .ToList()
+        );
+
+        // Publica o evento via Outbox: a mensagem é salva na tabela OutboxMessage
+        // dentro da mesma transação do SaveChangesAsync abaixo.
+        // Isso garante: ou a NF fecha E a mensagem é enfileirada, ou nenhum dos dois.
+        await _publishEndpoint.Publish(invoiceEvent, ct);
 
         try
         {
@@ -154,7 +165,9 @@ public class InvoiceService : IInvoiceService
              throw new DuplicateIdempotencyKeyException(idempotencyKey);
         }
 
-        _logger.LogInformation("Nota Fiscal impressa e fechada. ID: {InvoiceId}, Numero: {InvoiceNumber}", invoice.Id, invoice.InvoiceNumber);
+        _logger.LogInformation(
+            "Nota Fiscal impressa e fechada. Evento InvoicePrintedEvent enfileirado via Outbox. ID: {InvoiceId}, Numero: {InvoiceNumber}",
+            invoice.Id, invoice.InvoiceNumber);
 
         return invoice.ToResponse();
     }

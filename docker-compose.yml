@@ -24,6 +24,23 @@ services:
     networks:
       - korp-network
 
+  # ── Message Broker ───────────────────────────────────────────────────────────
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: korp-rabbitmq
+    restart: unless-stopped
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - korp-network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
   # ── Inventory Microservice ───────────────────────────────────────────────────
   inventory-service:
     build:
@@ -37,6 +54,7 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Docker
       ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=inventory_db;Username=korp_user;Password=korp_pass"
+      ConnectionStrings__RabbitMq: "amqp://guest:guest@rabbitmq:5672"
     ports:
       - "5001:8080"
     networks:
@@ -63,6 +81,7 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Docker
       ConnectionStrings__DefaultConnection: "Host=postgres;Port=5432;Database=billing_db;Username=korp_user;Password=korp_pass"
+      ConnectionStrings__RabbitMq: "amqp://guest:guest@rabbitmq:5672"
       InventoryService__BaseUrl: "http://inventory-service:8080"
     ports:
       - "5002:8080"
