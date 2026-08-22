@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/Inventory/">
+    <Project Path="services/inventory-service/src/InventoryService.Api/InventoryService.Api.csproj" />
+    <Project Path="services/inventory-service/tests/InventoryService.Tests/InventoryService.Tests.csproj" />
+  </Folder>
+  <Folder Name="/Billing/">
+    <Project Path="services/billing-service/src/BillingService.Api/BillingService.Api.csproj" />
+    <Project Path="services/billing-service/tests/BillingService.Tests/BillingService.Tests.csproj" />
+  </Folder>
+</Solution>
