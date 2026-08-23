@@ -25,6 +25,7 @@ public class ProductsController : ControllerBase
     /// <param name="search">Termo de busca (opcional).</param>
     [HttpGet]
     [ProducesResponseType(typeof(ApiResponse<IEnumerable<ProductResponse>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> GetAll(
         [FromQuery] string? search,
         CancellationToken ct)
@@ -37,7 +38,8 @@ public class ProductsController : ControllerBase
     /// <param name="id">Identificador único do produto.</param>
     [HttpGet("{id:guid}")]
     [ProducesResponseType(typeof(ApiResponse<ProductResponse>), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> GetById(Guid id, CancellationToken ct)
     {
         var product = await _productService.GetByIdAsync(id, ct);
@@ -51,7 +53,8 @@ public class ProductsController : ControllerBase
     /// <param name="id">Identificador único do produto.</param>
     [HttpGet("{id:guid}/stock-balance")]
     [ProducesResponseType(typeof(ApiResponse<StockBalanceResponse>), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> GetStockBalance(Guid id, CancellationToken ct)
     {
         var balance = await _productService.GetStockBalanceAsync(id, ct);
@@ -60,9 +63,12 @@ public class ProductsController : ControllerBase
 
     /// <summary>Cadastra um novo produto com saldo inicial de estoque.</summary>
     [HttpPost]
+    [Consumes("application/json")]
     [ProducesResponseType(typeof(ApiResponse<ProductResponse>), StatusCodes.Status201Created)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status415UnsupportedMediaType)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> Create(
         [FromBody] CreateProductRequest request,
         CancellationToken ct)
@@ -78,9 +84,13 @@ public class ProductsController : ControllerBase
     /// <summary>Atualiza a descrição e unidade de um produto existente.</summary>
     /// <param name="id">Identificador único do produto.</param>
     [HttpPut("{id:guid}")]
+    [Consumes("application/json")]
     [ProducesResponseType(typeof(ApiResponse<ProductResponse>), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status415UnsupportedMediaType)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> Update(
         Guid id,
         [FromBody] UpdateProductRequest request,
@@ -97,10 +107,13 @@ public class ProductsController : ControllerBase
     /// </summary>
     /// <param name="id">Identificador único do produto.</param>
     [HttpPost("{id:guid}/deduct-stock")]
+    [Consumes("application/json")]
     [ProducesResponseType(typeof(ApiResponse<StockBalanceResponse>), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status415UnsupportedMediaType)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> DeductStock(
         Guid id,
         [FromBody] DeductStockRequest request,
@@ -115,7 +128,9 @@ public class ProductsController : ControllerBase
     /// <param name="id">Identificador único do produto.</param>
     [HttpDelete("{id:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
     {
         await _productService.DeleteAsync(id, ct);

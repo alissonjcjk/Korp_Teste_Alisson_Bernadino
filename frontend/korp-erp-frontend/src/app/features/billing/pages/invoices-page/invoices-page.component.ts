@@ -25,11 +25,11 @@ export class InvoicesPageComponent implements OnInit {
   saving = signal(false);
   printingId = signal<string | null>(null);
   showModal = signal(false);
-  searchTerm = '';
+  searchTerm = signal('');
 
   // Computed
   filteredInvoices = computed(() => {
-    const term = this.searchTerm.toLowerCase();
+    const term = this.searchTerm().toLowerCase();
     if (!term) return this.invoices();
     return this.invoices().filter(i =>
       i.invoiceNumber.toString().includes(term) ||
@@ -54,7 +54,7 @@ export class InvoicesPageComponent implements OnInit {
   }
 
   onSearch(term: string): void {
-    this.searchTerm = term;
+    this.searchTerm.set(term);
   }
 
   openCreate(): void {

@@ -1,3 +1,5 @@
+using InventoryService.Api.OpenApi;
+
 namespace InventoryService.Api.DTOs;
 
 /// <summary>
@@ -5,7 +7,9 @@ namespace InventoryService.Api.DTOs;
 /// </summary>
 public record UpdateProductRequest
 {
-    public string Description { get; init; } = string.Empty;
+    [ApiSchemaRequired]
+    public string? Description { get; init; }
 
-    public string Unit { get; init; } = "UN";
+    [ApiSchemaRequired]
+    public string? Unit { get; init; }
 }

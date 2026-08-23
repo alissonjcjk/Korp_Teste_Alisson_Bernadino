@@ -42,7 +42,7 @@ public record InvoiceSummaryResponse
 }
 
 /// <summary>
-/// Resposta genérica padronizada para todos os endpoints do BillingService.
+/// Envelope padronizado para respostas de sucesso do BillingService.
 /// </summary>
 public record ApiResponse<T>
 {
@@ -52,9 +52,6 @@ public record ApiResponse<T>
 
     public static ApiResponse<T> Ok(T data, string message = "Operação realizada com sucesso.")
         => new() { Success = true, Message = message, Data = data };
-
-    public static ApiResponse<T> Fail(string message)
-        => new() { Success = false, Message = message, Data = default };
 }
 
 /// <summary>
@@ -81,7 +78,7 @@ public static class InvoiceMappingExtensions
             ProductDescription = i.ProductDescription,
             Quantity = i.Quantity,
             UnitPrice = i.UnitPrice,
-            TotalPrice = i.Quantity * i.UnitPrice
+            TotalPrice = i.TotalPrice
         }).ToList()
     };
 

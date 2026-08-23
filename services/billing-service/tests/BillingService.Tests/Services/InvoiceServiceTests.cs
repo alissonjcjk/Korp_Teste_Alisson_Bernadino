@@ -4,6 +4,7 @@ using BillingService.Api.DTOs;
 using BillingService.Api.Exceptions;
 using BillingService.Api.Models;
 using BillingService.Api.Services;
+using BillingService.Api.Validators;
 using Korp.Shared.Events;
 using MassTransit;
 using Microsoft.EntityFrameworkCore;
@@ -28,6 +29,65 @@ public class InvoiceServiceTests
     }
 
     [Fact]
+    public async Task CreateAsync_RejectsTooManyItemsBeforeCallingInventory()
+    {
+        await using var context = CreateContext();
+        var service = CreateService(context, new FakeInventoryClient());
+        var request = new CreateInvoiceRequest
+        {
+            Items = Enumerable.Range(0, CreateInvoiceRequestValidator.MaximumItems + 1)
+                .Select(_ => new CreateInvoiceItemRequest
+                {
+                    ProductId = Guid.NewGuid(),
+                    Quantity = 1m,
+                    UnitPrice = 1m
+                })
+                .ToList()
+        };
+
+        var exception = await Assert.ThrowsAsync<TooManyInvoiceItemsException>(() =>
+            service.CreateAsync(request));
+
+        Assert.Equal(400, exception.StatusCode);
+        Assert.Empty(await context.Invoices.ToListAsync());
+    }
+
+    [Fact]
+    public async Task CreateAsync_RejectsNullItemWithoutThrowingNullReference()
+    {
+        await using var context = CreateContext();
+        var service = CreateService(context, new FakeInventoryClient());
+        var request = new CreateInvoiceRequest
+        {
+            Items = new List<CreateInvoiceItemRequest> { null! }
+        };
+
+        var exception = await Assert.ThrowsAsync<InvalidInvoiceItemException>(() =>
+            service.CreateAsync(request));
+
+        Assert.Equal(400, exception.StatusCode);
+        Assert.Empty(await context.Invoices.ToListAsync());
+    }
+
+    [Fact]
+    public async Task CreateAsync_RejectsUnrepresentableTotalBeforePersistence()
+    {
+        await using var context = CreateContext();
+        var productId = Guid.NewGuid();
+        var service = CreateService(context, InventoryContaining(productId));
+        var request = RequestWithItem(
+            productId,
+            quantity: InvoiceAmount.MaxValue,
+            unitPrice: 2m);
+
+        var exception = await Assert.ThrowsAsync<InvoiceAmountOutOfRangeException>(() =>
+            service.CreateAsync(request));
+
+        Assert.Equal(400, exception.StatusCode);
+        Assert.Empty(await context.Invoices.ToListAsync());
+    }
+
+    [Fact]
     public async Task CreateAsync_WhenProductDoesNotExist_RejectsAndDoesNotPersistInvoice()
     {
         await using var context = CreateContext();
@@ -35,9 +95,10 @@ public class InvoiceServiceTests
         var missingProductId = Guid.NewGuid();
         var request = RequestWithItem(missingProductId, quantity: 1m, unitPrice: 5m);
 
-        var exception = await Assert.ThrowsAsync<DomainException>(() => service.CreateAsync(request));
+        var exception = await Assert.ThrowsAsync<InventoryProductNotFoundException>(() =>
+            service.CreateAsync(request));
 
-        Assert.Equal(400, exception.StatusCode);
+        Assert.Equal(404, exception.StatusCode);
         Assert.Contains(missingProductId.ToString(), exception.Message);
         Assert.Empty(await context.Invoices.ToListAsync());
         Assert.Empty(await context.InvoiceItems.ToListAsync());
@@ -210,7 +271,7 @@ public class InvoiceServiceTests
         var exception = await Assert.ThrowsAsync<InvalidInvoiceStatusException>(() =>
             service.PrintAsync(invoice.Id, "another-key"));
 
-        Assert.Equal(400, exception.StatusCode);
+        Assert.Equal(409, exception.StatusCode);
         Assert.Contains("Closed", exception.Message);
     }
 
@@ -326,8 +387,8 @@ public class InvoiceServiceTests
         Guid productId,
         decimal quantity = 1m,
         decimal unitPrice = 10m) => new()
-    {
-        Items = new List<CreateInvoiceItemRequest>
+        {
+            Items = new List<CreateInvoiceItemRequest>
         {
             new()
             {
@@ -336,7 +397,7 @@ public class InvoiceServiceTests
                 UnitPrice = unitPrice
             }
         }
-    };
+        };
 
     private static Invoice InvoiceWithItem(
         int invoiceNumber,

@@ -40,5 +40,5 @@ public class InvoiceItem
     public decimal UnitPrice { get; set; }
 
     [Column("total_price")]
-    public decimal TotalPrice => Quantity * UnitPrice;
+    public decimal TotalPrice => InvoiceAmount.CalculateLineTotal(Quantity, UnitPrice);
 }

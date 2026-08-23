@@ -27,11 +27,11 @@ export class ProductsPageComponent implements OnInit {
   showDeleteConfirm = signal(false);
   selectedProduct   = signal<Product | null>(null);
   productToDelete   = signal<Product | null>(null);
-  searchTerm        = '';
+  searchTerm        = signal('');
 
   // Computed
   filteredProducts  = computed(() => {
-    const term = this.searchTerm.toLowerCase();
+    const term = this.searchTerm().toLowerCase();
     if (!term) return this.products();
     return this.products().filter(p =>
       p.code.toLowerCase().includes(term) ||
@@ -55,7 +55,7 @@ export class ProductsPageComponent implements OnInit {
   }
 
   onSearch(term: string): void {
-    this.searchTerm = term;
+    this.searchTerm.set(term);
   }
 
   openCreate(): void {

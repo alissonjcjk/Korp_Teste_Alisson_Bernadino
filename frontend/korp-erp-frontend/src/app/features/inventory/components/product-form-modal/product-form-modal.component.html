@@ -33,7 +33,7 @@
       <div>
         <label for="code" class="form-label">Código <span class="text-danger">*</span></label>
         <input id="code" formControlName="code" type="text" class="form-input"
-               placeholder="Ex: PROD-001" [attr.disabled]="product ? true : null"/>
+               placeholder="Ex: PROD-001"/>
         @if (f['code'].invalid && f['code'].touched) {
           <p class="form-error">
             <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
@@ -63,20 +63,26 @@
       <div class="grid grid-cols-2 gap-4">
         <div>
           <label for="stockBalance" class="form-label">Saldo Estoque <span class="text-danger">*</span></label>
-          <input id="stockBalance" formControlName="stockBalance" type="number" min="0" step="0.01"
-                 class="form-input" placeholder="0"/>
+          <input id="stockBalance" formControlName="stockBalance" type="number" min="0" step="0.0001"
+                 class="form-input" placeholder="0" required/>
           @if (f['stockBalance'].invalid && f['stockBalance'].touched) {
             <p class="form-error">
               <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
                 <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
               </svg>
-              Valor inválido
+              @if (f['stockBalance'].errors?.['required']) {
+                O saldo inicial é obrigatório
+              } @else if (f['stockBalance'].errors?.['min']) {
+                O saldo inicial não pode ser negativo
+              } @else {
+                Use no máximo 14 dígitos inteiros e 4 casas decimais
+              }
             </p>
           }
         </div>
         <div>
-          <label for="unit" class="form-label">Unidade</label>
-          <select id="unit" formControlName="unit" class="form-input">
+          <label for="unit" class="form-label">Unidade <span class="text-danger">*</span></label>
+          <select id="unit" formControlName="unit" class="form-input" required>
             <option value="UN">UN</option>
             <option value="KG">KG</option>
             <option value="LT">LT</option>

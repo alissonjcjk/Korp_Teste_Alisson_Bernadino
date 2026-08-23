@@ -35,6 +35,12 @@ public record InventoryApiResponse<T>
     public T? Data { get; init; }
 }
 
+/// <summary>Campos necessários para preservar uma rejeição de negócio remota.</summary>
+public record InventoryApiErrorResponse
+{
+    public string Message { get; init; } = string.Empty;
+}
+
 /// <summary>
 /// Payload enviado ao InventoryService para abater o estoque.
 /// </summary>

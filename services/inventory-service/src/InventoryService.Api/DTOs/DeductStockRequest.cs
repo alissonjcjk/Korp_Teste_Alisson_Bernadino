@@ -1,3 +1,5 @@
+using InventoryService.Api.OpenApi;
+
 namespace InventoryService.Api.DTOs;
 
 /// <summary>
@@ -7,11 +9,13 @@ namespace InventoryService.Api.DTOs;
 public record DeductStockRequest
 {
     /// <summary>Quantidade a ser abatida do estoque.</summary>
-    public decimal Quantity { get; init; }
+    [ApiSchemaRequired]
+    public decimal? Quantity { get; init; }
 
     /// <summary>
     /// Referência da nota fiscal que originou o abatimento.
     /// Usada para rastreabilidade nos logs.
     /// </summary>
-    public string InvoiceReference { get; init; } = string.Empty;
+    [ApiSchemaRequired]
+    public string? InvoiceReference { get; init; }
 }

@@ -34,7 +34,8 @@ public class InsufficientStockException : DomainException
 {
     public InsufficientStockException(string productCode, decimal requested, decimal available)
         : base($"Estoque insuficiente para o produto '{productCode}'. " +
-               $"Solicitado: {requested}, Disponível: {available}.") { }
+               $"Solicitado: {requested}, Disponível: {available}.", statusCode: 409)
+    { }
 }
 
 /// <summary>
@@ -43,7 +44,7 @@ public class InsufficientStockException : DomainException
 public class DuplicateProductCodeException : DomainException
 {
     public DuplicateProductCodeException(string code)
-        : base($"Já existe um produto cadastrado com o código '{code}'.") { }
+        : base($"Já existe um produto cadastrado com o código '{code}'.", statusCode: 409) { }
 }
 
 /// <summary>
@@ -54,5 +55,6 @@ public class ConcurrencyConflictException : DomainException
 {
     public ConcurrencyConflictException(string productCode)
         : base($"Conflito de concorrência ao atualizar o produto '{productCode}'. " +
-               $"Por favor, tente novamente.", statusCode: 409) { }
+               $"Por favor, tente novamente.", statusCode: 409)
+    { }
 }

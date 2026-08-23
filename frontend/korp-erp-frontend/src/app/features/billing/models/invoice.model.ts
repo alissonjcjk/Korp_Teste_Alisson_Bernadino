@@ -1,9 +1,3 @@
-export interface ApiResponse<T> {
-  success: boolean;
-  message: string;
-  data: T;
-}
-
 export interface InvoiceItemResponse {
   id: string;
   productId: string;
