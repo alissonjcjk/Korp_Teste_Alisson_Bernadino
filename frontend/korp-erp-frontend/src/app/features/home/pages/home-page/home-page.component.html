@@ -1,40 +1,100 @@
-<div class="relative w-full h-[calc(100vh-64px)] flex overflow-hidden">
-  
-  <!-- Left Side: Text -->
-  <div class="relative z-10 flex flex-col justify-center w-1/2 h-full p-16">
-    <h1 class="text-5xl font-bold text-white mb-6 leading-tight">
-      A Revolução do seu <br>
-      <span class="text-gradient">Gestor de Negócios</span>
-    </h1>
-    <p class="text-surface-400 text-lg mb-8 max-w-md leading-relaxed">
-      Controle de produtos, notas fiscais e relatórios inteligentes com a velocidade e o design premium que o seu fluxo de trabalho merece.
-    </p>
+<div class="flex flex-col w-full">
+  <!-- Hero Section -->
+  <div class="relative w-full h-[calc(100vh-64px)] flex overflow-hidden">
     
-    <div class="flex gap-4">
-      <a routerLink="/produtos" class="btn-primary w-fit text-lg px-8 py-3">Ver Produtos</a>
-      <a routerLink="/notas-fiscais" class="btn-secondary w-fit text-lg px-8 py-3 border border-surface-700 bg-surface-900/50 hover:bg-surface-800 transition-colors">Acessar Notas</a>
+    <!-- Left Side: Text -->
+    <div class="relative z-10 flex flex-col justify-center w-1/2 h-full p-16">
+      <h1 class="text-5xl font-bold text-white mb-6 leading-tight">
+        A Revolução do seu <br>
+        <span class="text-gradient">Gestor de Negócios</span>
+      </h1>
+      <p class="text-surface-400 text-lg mb-8 max-w-md leading-relaxed">
+        Controle de produtos, notas fiscais e relatórios inteligentes com a velocidade e o design premium que o seu fluxo de trabalho merece.
+      </p>
+      
+      <div class="flex gap-4">
+        <a routerLink="/produtos" class="btn-primary w-fit text-lg px-8 py-3">Ver Produtos</a>
+        <a routerLink="/notas-fiscais" class="btn-secondary w-fit text-lg px-8 py-3 border border-surface-700 bg-surface-900/50 hover:bg-surface-800 transition-colors">Acessar Notas</a>
+      </div>
+    </div>
+
+    <!-- Right Side: Fading Slider -->
+    <div class="absolute right-0 top-0 h-full w-1/2 mask-gradient overflow-hidden">
+      <!-- Slider Container -->
+      <div class="flex h-full w-[200%] transition-transform duration-1000 ease-in-out"
+           [style.transform]="'translateX(-' + (currentIndex() * 50) + '%)'">
+        
+        <!-- Slide 1 -->
+        <div class="w-1/2 h-full flex items-center justify-center p-8">
+          <img src="/assets/erp2.png?v=2" alt="ERP Dashboard 1" 
+               class="w-full max-h-[80%] object-contain rounded-2xl shadow-2xl border border-white/10" />
+        </div>
+
+        <!-- Slide 2 -->
+        <div class="w-1/2 h-full flex items-center justify-center p-8">
+          <img src="/assets/erp4.png?v=2" alt="ERP Dashboard 2" 
+               class="w-full max-h-[80%] object-contain rounded-2xl shadow-2xl border border-white/10" />
+        </div>
+        
+      </div>
     </div>
   </div>
 
-  <!-- Right Side: Fading Slider -->
-  <div class="absolute right-0 top-0 h-full w-1/2 mask-gradient overflow-hidden">
-    <!-- Slider Container -->
-    <div class="flex h-full w-[200%] transition-transform duration-1000 ease-in-out"
-         [style.transform]="'translateX(-' + (currentIndex() * 50) + '%)'">
+  <!-- Features Section -->
+  <div class="w-full py-24 px-16 flex flex-col items-center">
+    
+    <div class="text-center max-w-3xl mb-16">
+      <h2 class="text-4xl font-bold text-white mb-6">O ERP Industrial que vai além do software</h2>
+      <p class="text-surface-400 text-lg leading-relaxed">
+        São quase 30 anos estudando as verdadeiras dores do gestor industrial. Nós sabemos que produtividade, lucro e
+        crescimento são consequência de três palavras-chave: controle, rastreabilidade e custos.
+      </p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8 w-full max-w-6xl">
       
-      <!-- Slide 1 -->
-      <div class="w-1/2 h-full flex items-center justify-center p-8">
-        <img src="/assets/erp2.png" alt="ERP Dashboard 1" 
-             class="w-full max-h-[80%] object-contain rounded-2xl shadow-2xl border border-white/10" />
+      <!-- Card 1: Controle -->
+      <div class="glass-card p-8 flex flex-col gap-6 hover:-translate-y-2 transition-transform duration-300">
+        <div class="w-16 h-16 rounded-2xl bg-primary-900/30 border border-primary-500/20 flex items-center justify-center">
+          <svg class="w-8 h-8 text-primary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+          </svg>
+        </div>
+        <h3 class="text-xl font-bold text-white tracking-wide">CONTROLE</h3>
+        <div class="text-surface-400 space-y-4">
+          <p>Você precisa ter informações quantitativas sobre <strong class="text-white">estoque, produção, vendas</strong> e todo o resto.</p>
+          <p>É isso que garante decisões inteligentes, capacidade de crescimento e cada vez mais produtividade.</p>
+        </div>
       </div>
 
-      <!-- Slide 2 -->
-      <div class="w-1/2 h-full flex items-center justify-center p-8">
-        <img src="/assets/erp4.png" alt="ERP Dashboard 2" 
-             class="w-full max-h-[80%] object-contain rounded-2xl shadow-2xl border border-white/10" />
+      <!-- Card 2: Rastreabilidade -->
+      <div class="glass-card p-8 flex flex-col gap-6 hover:-translate-y-2 transition-transform duration-300">
+        <div class="w-16 h-16 rounded-2xl bg-primary-900/30 border border-primary-500/20 flex items-center justify-center">
+          <svg class="w-8 h-8 text-primary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+          </svg>
+        </div>
+        <h3 class="text-xl font-bold text-white tracking-wide">RASTREABILIDADE</h3>
+        <div class="text-surface-400 space-y-4">
+          <p>Você sabe <strong class="text-white">onde, quando e como as coisas aconteceram</strong>, desde a matéria-prima até a expedição?</p>
+          <p>É isso que garante <strong class="text-white">confiança, transparência e eficiência.</strong></p>
+        </div>
       </div>
-      
+
+      <!-- Card 3: Custos -->
+      <div class="glass-card p-8 flex flex-col gap-6 hover:-translate-y-2 transition-transform duration-300">
+        <div class="w-16 h-16 rounded-2xl bg-primary-900/30 border border-primary-500/20 flex items-center justify-center">
+          <svg class="w-8 h-8 text-primary-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+          </svg>
+        </div>
+        <h3 class="text-xl font-bold text-white tracking-wide">CUSTOS</h3>
+        <div class="text-surface-400 space-y-4">
+          <p>Para ter lucro, é preciso ter capacidade de <strong class="text-white">aplicar markups, calcular comissões e descontos, e analisar o custo real de fabricação.</strong></p>
+          <p>Só uma solução de gestão robusta garante esses resultados.</p>
+        </div>
+      </div>
+
     </div>
   </div>
-
 </div>

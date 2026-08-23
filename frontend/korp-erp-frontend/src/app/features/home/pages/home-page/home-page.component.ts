@@ -38,8 +38,8 @@ import { RouterModule } from '@angular/router';
 export class HomePageComponent implements OnInit, OnDestroy {
   // Images to slide
   images = [
-    { src: '/assets/erp2.png', alt: 'ERP Dashboard 1' },
-    { src: '/assets/erp4.png', alt: 'ERP Dashboard 2' }
+    { src: '/assets/erp2.png?v=2', alt: 'ERP Dashboard 1' },
+    { src: '/assets/erp4.png?v=2', alt: 'ERP Dashboard 2' }
   ];
 
   currentIndex = signal(0);
