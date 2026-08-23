@@ -1,11 +1,10 @@
 import { Component, OnInit, OnDestroy, signal } from '@angular/core';
-import { NgClass } from '@angular/common';
 import { RouterModule } from '@angular/router';
 
 @Component({
   selector: 'app-home-page',
   standalone: true,
-  imports: [NgClass, RouterModule],
+  imports: [RouterModule],
   templateUrl: './home-page.component.html',
   styles: `
     .mask-gradient {
