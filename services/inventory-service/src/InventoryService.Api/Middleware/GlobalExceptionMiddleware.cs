@@ -1,29 +1,27 @@
 using System.Net;
-using System.Text.Json;
+using InventoryService.Api.DTOs;
 using InventoryService.Api.Exceptions;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace InventoryService.Api.Middleware;
 
 /// <summary>
 /// Middleware que intercepta todas as exceções não tratadas da pipeline
 /// e retorna respostas JSON padronizadas com o código HTTP correto.
-/// Evita que detalhes internos vazem para o cliente em produção.
+/// Evita que detalhes internos vazem para o cliente em qualquer ambiente.
 /// </summary>
 public class GlobalExceptionMiddleware
 {
     private readonly RequestDelegate _next;
     private readonly ILogger<GlobalExceptionMiddleware> _logger;
-    private readonly IHostEnvironment _env;
 
     public GlobalExceptionMiddleware(
         RequestDelegate next,
-        ILogger<GlobalExceptionMiddleware> logger,
-        IHostEnvironment env)
+        ILogger<GlobalExceptionMiddleware> logger)
     {
         _next = next;
         _logger = logger;
-        _env = env;
     }
 
     public async Task InvokeAsync(HttpContext context)
@@ -34,6 +32,15 @@ public class GlobalExceptionMiddleware
         }
         catch (Exception ex)
         {
+            if (context.Response.HasStarted)
+            {
+                _logger.LogError(
+                    ex,
+                    "Unhandled exception after the response started. Path: {Path}",
+                    context.Request.Path);
+                throw;
+            }
+
             await HandleExceptionAsync(context, ex);
         }
     }
@@ -52,9 +59,16 @@ public class GlobalExceptionMiddleware
             ),
 
             // ── Violação de constraint única no banco (ex: código duplicado) ──
-            DbUpdateException dbEx when dbEx.InnerException?.Message.Contains("unique") == true => (
+            DbUpdateException dbEx when IsUniqueConstraintViolation(dbEx) => (
                 (int)HttpStatusCode.Conflict,
-                "Já existe um registro com os mesmos dados únicos (código duplicado)."
+                "Já existe um produto cadastrado com o código informado."
+            ),
+
+            BadHttpRequestException badRequestException => (
+                NormalizeClientErrorStatus(badRequestException.StatusCode),
+                badRequestException.StatusCode == StatusCodes.Status413PayloadTooLarge
+                    ? "O corpo da requisição excede o tamanho permitido."
+                    : "A requisição informada é inválida."
             ),
 
             // ── Qualquer outra exceção inesperada ─────────────────────────────
@@ -71,26 +85,30 @@ public class GlobalExceptionMiddleware
             _logger.LogWarning(exception, "Domain exception. Path: {Path} | Message: {Message}",
                 context.Request.Path, exception.Message);
 
-        context.Response.ContentType = "application/json";
         context.Response.StatusCode = statusCode;
 
-        var response = new
-        {
-            success = false,
-            statusCode,
-            message,
-            // Detalhes do stack trace apenas em ambiente de desenvolvimento
-            detail = _env.IsDevelopment() ? exception.ToString() : null,
-            timestamp = DateTime.UtcNow
-        };
-
-        var json = JsonSerializer.Serialize(response, new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-        });
-
-        await context.Response.WriteAsync(json);
+        var response = ApiErrorResponseFactory.Create(context, statusCode, message);
+        await context.Response.WriteAsJsonAsync(response, cancellationToken: context.RequestAborted);
     }
+
+    private static bool IsUniqueConstraintViolation(DbUpdateException exception)
+    {
+        for (Exception? current = exception; current is not null; current = current.InnerException)
+        {
+            if (current is PostgresException postgresException &&
+                postgresException.SqlState == PostgresErrorCodes.UniqueViolation)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static int NormalizeClientErrorStatus(int statusCode) =>
+        statusCode is >= 400 and < 500
+            ? statusCode
+            : StatusCodes.Status400BadRequest;
 }
 
 /// <summary>

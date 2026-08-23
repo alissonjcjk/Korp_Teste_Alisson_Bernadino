@@ -5,7 +5,9 @@ using BillingService.Api.DTOs;
 using BillingService.Api.Exceptions;
 using BillingService.Api.Models;
 using BillingService.Api.Clients;
+using BillingService.Api.Validators;
 using Korp.Shared.Events;
+using Npgsql;
 
 namespace BillingService.Api.Services;
 
@@ -56,6 +58,9 @@ public class InvoiceService : IInvoiceService
         if (request.Items == null || !request.Items.Any())
             throw new InvoiceHasNoItemsException();
 
+        if (request.Items.Count > CreateInvoiceRequestValidator.MaximumItems)
+            throw new TooManyInvoiceItemsException(CreateInvoiceRequestValidator.MaximumItems);
+
         // Gera número sequencial da NF
         var nextNumber = await _context.Invoices
             .AnyAsync(ct)
@@ -76,11 +81,14 @@ public class InvoiceService : IInvoiceService
 
         foreach (var reqItem in request.Items)
         {
+            if (reqItem is null || reqItem.Quantity is not > 0 || reqItem.UnitPrice is not >= 0)
+                throw new InvalidInvoiceItemException();
+
             // Valida o produto chamando o serviço de estoque de forma síncrona/esperada
             var product = await _inventoryClient.GetProductAsync(reqItem.ProductId, ct);
             if (product == null)
             {
-                throw new DomainException($"Produto com ID {reqItem.ProductId} não encontrado no serviço de estoque.", 400);
+                throw new InventoryProductNotFoundException(reqItem.ProductId);
             }
 
             var invoiceItem = new InvoiceItem
@@ -88,11 +96,18 @@ public class InvoiceService : IInvoiceService
                 ProductId = reqItem.ProductId,
                 ProductCode = product.Code,
                 ProductDescription = product.Description,
-                Quantity = reqItem.Quantity,
-                UnitPrice = reqItem.UnitPrice
+                Quantity = reqItem.Quantity!.Value,
+                UnitPrice = reqItem.UnitPrice!.Value
             };
 
-            totalAmount += invoiceItem.TotalPrice;
+            var lineTotal = invoiceItem.TotalPrice;
+            if (lineTotal > InvoiceAmount.MaxValue ||
+                totalAmount > InvoiceAmount.MaxValue - lineTotal)
+            {
+                throw new InvoiceAmountOutOfRangeException();
+            }
+
+            totalAmount += lineTotal;
             invoice.Items.Add(invoiceItem);
         }
 
@@ -111,7 +126,7 @@ public class InvoiceService : IInvoiceService
         // Verificar se a chave de idempotência já existe. Se existir, retornar erro (ou a nota já fechada).
         var existingInvoiceWithKey = await _context.Invoices
             .FirstOrDefaultAsync(i => i.IdempotencyKey == idempotencyKey, ct);
-        
+
         if (existingInvoiceWithKey != null && existingInvoiceWithKey.Id != id)
         {
             throw new DuplicateIdempotencyKeyException(idempotencyKey);
@@ -160,9 +175,13 @@ public class InvoiceService : IInvoiceService
         {
             await _context.SaveChangesAsync(ct);
         }
-        catch (DbUpdateException ex) when (ex.InnerException?.Message.Contains("unique") == true)
+        catch (DbUpdateException ex) when (
+            ex.InnerException is PostgresException
+            {
+                SqlState: PostgresErrorCodes.UniqueViolation
+            })
         {
-             throw new DuplicateIdempotencyKeyException(idempotencyKey);
+            throw new DuplicateIdempotencyKeyException(idempotencyKey);
         }
 
         _logger.LogInformation(

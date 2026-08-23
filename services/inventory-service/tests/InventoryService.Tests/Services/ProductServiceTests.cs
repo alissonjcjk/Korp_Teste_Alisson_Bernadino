@@ -54,6 +54,7 @@ public class ProductServiceTests
                 CancellationToken.None));
 
         Assert.Contains("PROD-001", exception.Message);
+        Assert.Equal(409, exception.StatusCode);
         Assert.Equal(1, await context.Products.CountAsync(CancellationToken.None));
     }
 
@@ -182,6 +183,7 @@ public class ProductServiceTests
                 CancellationToken.None));
 
         Assert.Contains("Disponível: 2", exception.Message);
+        Assert.Equal(409, exception.StatusCode);
         Assert.Equal(2m, (await context.Products.SingleAsync(
             CancellationToken.None)).StockBalance);
     }
@@ -240,10 +242,10 @@ public class ProductServiceTests
         string code,
         string description,
         decimal balance) => new()
-    {
-        Code = code,
-        Description = description,
-        StockBalance = balance,
-        Unit = "UN"
-    };
+        {
+            Code = code,
+            Description = description,
+            StockBalance = balance,
+            Unit = "UN"
+        };
 }

@@ -18,6 +18,18 @@ public class InvoiceMappingTests
     }
 
     [Fact]
+    public void InvoiceItem_TotalPrice_RoundsToStoredScaleAwayFromZero()
+    {
+        var item = new InvoiceItem
+        {
+            Quantity = 1.0001m,
+            UnitPrice = 1.0001m
+        };
+
+        Assert.Equal(1.0002m, item.TotalPrice);
+    }
+
+    [Fact]
     public void ToResponse_MapsInvoiceAndCalculatesEachItemTotal()
     {
         var createdAt = new DateTime(2026, 8, 20, 10, 30, 0, DateTimeKind.Utc);

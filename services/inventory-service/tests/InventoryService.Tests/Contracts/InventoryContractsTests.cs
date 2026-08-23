@@ -54,13 +54,4 @@ public class InventoryContractsTests
         Assert.Equal("Criado", response.Message);
     }
 
-    [Fact]
-    public void ApiResponseFail_ClearsDataAndPreservesErrorMessage()
-    {
-        var response = ApiResponse<ProductResponse>.Fail("Falha esperada");
-
-        Assert.False(response.Success);
-        Assert.Null(response.Data);
-        Assert.Equal("Falha esperada", response.Message);
-    }
 }

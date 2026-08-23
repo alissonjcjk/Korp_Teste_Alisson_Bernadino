@@ -5,6 +5,8 @@ using InventoryService.Api.Data;
 using InventoryService.Api.Services;
 using InventoryService.Api.Consumers;
 using InventoryService.Api.Middleware;
+using InventoryService.Api.Configuration;
+using InventoryService.Api.OpenApi;
 using FluentValidation;
 using FluentValidation.AspNetCore;
 
@@ -20,12 +22,13 @@ Log.Logger = new LoggerConfiguration()
 builder.Host.UseSerilog();
 
 // ── Services ─────────────────────────────────────────────────────────────────
-builder.Services.AddControllers();
+builder.Services.AddConfiguredApiControllers();
 builder.Services.AddFluentValidationAutoValidation().AddFluentValidationClientsideAdapters();
 builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
+    c.SchemaFilter<RequiredPropertiesSchemaFilter>();
     c.SwaggerDoc("v1", new()
     {
         Title = "Inventory Service API",
@@ -106,6 +109,7 @@ using (var scope = app.Services.CreateScope())
 
 // ── Middleware Pipeline ───────────────────────────────────────────────────────
 app.UseGlobalExceptionHandler(); // Deve ser o primeiro middleware
+app.UseApiErrorStatusCodePages();
 app.UseSerilogRequestLogging();
 
 if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Docker"))

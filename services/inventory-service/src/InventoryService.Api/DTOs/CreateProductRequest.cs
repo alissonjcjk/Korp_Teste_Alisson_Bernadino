@@ -1,3 +1,5 @@
+using InventoryService.Api.OpenApi;
+
 namespace InventoryService.Api.DTOs;
 
 /// <summary>
@@ -6,14 +8,18 @@ namespace InventoryService.Api.DTOs;
 public record CreateProductRequest
 {
     /// <summary>Código único do produto (ex: "PROD-001").</summary>
-    public string Code { get; init; } = string.Empty;
+    [ApiSchemaRequired]
+    public string? Code { get; init; }
 
     /// <summary>Descrição detalhada do produto.</summary>
-    public string Description { get; init; } = string.Empty;
+    [ApiSchemaRequired]
+    public string? Description { get; init; }
 
     /// <summary>Saldo inicial de estoque. Deve ser maior ou igual a zero.</summary>
-    public decimal StockBalance { get; init; }
+    [ApiSchemaRequired]
+    public decimal? StockBalance { get; init; }
 
-    /// <summary>Unidade de medida (padrão: UN).</summary>
-    public string Unit { get; init; } = "UN";
+    /// <summary>Unidade de medida obrigatória.</summary>
+    [ApiSchemaRequired]
+    public string? Unit { get; init; }
 }

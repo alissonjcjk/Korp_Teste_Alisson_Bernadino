@@ -31,6 +31,23 @@ describe('ProductFormModalComponent', () => {
     expect(component.form.controls.stockBalance.hasError('min')).toBeTrue();
   });
 
+  it('requires the unit and enforces numeric(18,4) stock precision', () => {
+    component.form.controls.unit.setValue('');
+    expect(component.form.controls.unit.hasError('required')).toBeTrue();
+
+    component.form.controls.stockBalance.setValue(0.0001);
+    expect(component.form.controls.stockBalance.valid).toBeTrue();
+
+    component.form.controls.stockBalance.setValue(0.00001);
+    expect(component.form.controls.stockBalance.hasError('decimalPrecision')).toBeTrue();
+
+    component.form.controls.stockBalance.setValue(99999999999999);
+    expect(component.form.controls.stockBalance.valid).toBeTrue();
+
+    component.form.controls.stockBalance.setValue(100000000000000);
+    expect(component.form.controls.stockBalance.hasError('decimalPrecision')).toBeTrue();
+  });
+
   it('emits the form value when a valid product is submitted', () => {
     spyOn(component.save, 'emit');
     component.form.setValue({
@@ -70,5 +87,7 @@ describe('ProductFormModalComponent', () => {
       stockBalance: 7.5,
       unit: 'KG'
     });
+    expect((fixture.nativeElement.querySelector('#code') as HTMLInputElement).disabled).toBeTrue();
+    expect((fixture.nativeElement.querySelector('#stockBalance') as HTMLInputElement).disabled).toBeTrue();
   });
 });

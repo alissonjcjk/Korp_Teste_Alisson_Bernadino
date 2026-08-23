@@ -27,7 +27,7 @@ public record StockBalanceResponse
 }
 
 /// <summary>
-/// Resposta genérica para mensagens de operações de sucesso/erro.
+/// Resposta genérica para operações bem-sucedidas.
 /// </summary>
 public record ApiResponse<T>
 {
@@ -38,6 +38,4 @@ public record ApiResponse<T>
     public static ApiResponse<T> Ok(T data, string message = "Operação realizada com sucesso.")
         => new() { Success = true, Message = message, Data = data };
 
-    public static ApiResponse<T> Fail(string message)
-        => new() { Success = false, Message = message, Data = default };
 }

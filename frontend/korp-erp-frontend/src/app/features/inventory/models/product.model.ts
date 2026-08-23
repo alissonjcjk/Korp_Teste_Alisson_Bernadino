@@ -1,10 +1,3 @@
-// Representa a resposta da API envolvida no ApiResponse<T>
-export interface ApiResponse<T> {
-  success: boolean;
-  message: string;
-  data: T;
-}
-
 export interface Product {
   id: string;
   code: string;
@@ -23,8 +16,6 @@ export interface CreateProductRequest {
 }
 
 export interface UpdateProductRequest {
-  code: string;
   description: string;
-  stockBalance: number;
   unit: string;
 }

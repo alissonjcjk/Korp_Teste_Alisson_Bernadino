@@ -1,7 +1,8 @@
-using System.Net;
-using System.Text.Json;
+using BillingService.Api.DTOs;
 using BillingService.Api.Exceptions;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
+using Polly.CircuitBreaker;
 
 namespace BillingService.Api.Middleware;
 
@@ -13,16 +14,13 @@ public class GlobalExceptionMiddleware
 {
     private readonly RequestDelegate _next;
     private readonly ILogger<GlobalExceptionMiddleware> _logger;
-    private readonly IHostEnvironment _env;
 
     public GlobalExceptionMiddleware(
         RequestDelegate next,
-        ILogger<GlobalExceptionMiddleware> logger,
-        IHostEnvironment env)
+        ILogger<GlobalExceptionMiddleware> logger)
     {
         _next = next;
         _logger = logger;
-        _env = env;
     }
 
     public async Task InvokeAsync(HttpContext context)
@@ -33,6 +31,15 @@ public class GlobalExceptionMiddleware
         }
         catch (Exception ex)
         {
+            if (context.Response.HasStarted)
+            {
+                _logger.LogError(
+                    ex,
+                    "Não foi possível escrever o envelope de erro porque a resposta já foi iniciada. Path: {Path}",
+                    context.Request.Path);
+                throw;
+            }
+
             await HandleExceptionAsync(context, ex);
         }
     }
@@ -44,27 +51,35 @@ public class GlobalExceptionMiddleware
             // ── Exceções de domínio (regras de negócio) ──────────────────────
             DomainException domainEx => (domainEx.StatusCode, domainEx.Message),
 
-            // ── Timeout do HttpClient (Inventory Service lento demais) ────────
-            TaskCanceledException => (
-                (int)HttpStatusCode.GatewayTimeout,
-                "O Serviço de Estoque demorou demais para responder. Tente novamente."
-            ),
+            // ── Circuit breaker aberto para o Inventory Service ──────────────
+            BrokenCircuitException => (
+                StatusCodes.Status503ServiceUnavailable,
+                InventoryServiceUnavailableException.SafeMessage),
 
-            // ── HttpRequestException (falha de rede com Inventory) ────────────
-            HttpRequestException => (
-                (int)HttpStatusCode.ServiceUnavailable,
-                "Não foi possível se comunicar com o Serviço de Estoque. Tente novamente mais tarde."
-            ),
+            // ── Timeout ou falha de rede com o Inventory Service ─────────────
+            TaskCanceledException or HttpRequestException => (
+                StatusCodes.Status503ServiceUnavailable,
+                InventoryServiceUnavailableException.SafeMessage),
+
+            BadHttpRequestException badRequestException => (
+                NormalizeClientErrorStatus(badRequestException.StatusCode),
+                badRequestException.StatusCode == StatusCodes.Status413PayloadTooLarge
+                    ? "O corpo da requisição excede o tamanho permitido."
+                    : "A requisição informada é inválida."),
+
+            DbUpdateConcurrencyException => (
+                StatusCodes.Status409Conflict,
+                "Conflito de concorrência detectado. Os dados foram modificados por outro processo. Tente novamente."),
 
             // ── Conflito de constraint única (idempotência duplicada) ─────────
-            DbUpdateException dbEx when dbEx.InnerException?.Message.Contains("unique") == true => (
-                (int)HttpStatusCode.Conflict,
+            DbUpdateException dbEx when IsUniqueViolation(dbEx) => (
+                StatusCodes.Status409Conflict,
                 "Já existe um registro com os mesmos dados únicos."
             ),
 
             // ── Qualquer outra exceção não prevista ───────────────────────────
             _ => (
-                (int)HttpStatusCode.InternalServerError,
+                StatusCodes.Status500InternalServerError,
                 "Ocorreu um erro interno no servidor. Tente novamente mais tarde."
             )
         };
@@ -75,25 +90,34 @@ public class GlobalExceptionMiddleware
             _logger.LogWarning(exception, "Domain exception. Path: {Path} | Message: {Message}",
                 context.Request.Path, exception.Message);
 
-        context.Response.ContentType = "application/json";
         context.Response.StatusCode = statusCode;
 
-        var response = new
-        {
-            success = false,
-            statusCode,
-            message,
-            detail = _env.IsDevelopment() ? exception.ToString() : null,
-            timestamp = DateTime.UtcNow
-        };
-
-        var json = JsonSerializer.Serialize(response, new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-        });
-
-        await context.Response.WriteAsync(json);
+        var response = ApiErrorResponseFactory.Create(context, statusCode, message);
+        await context.Response.WriteAsJsonAsync(
+            response,
+            cancellationToken: context.RequestAborted);
     }
+
+    private static bool IsUniqueViolation(DbUpdateException exception)
+    {
+        for (Exception? current = exception; current is not null; current = current.InnerException)
+        {
+            if (current is PostgresException
+                {
+                    SqlState: PostgresErrorCodes.UniqueViolation
+                })
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static int NormalizeClientErrorStatus(int statusCode) =>
+        statusCode is >= 400 and < 500
+            ? statusCode
+            : StatusCodes.Status400BadRequest;
 }
 
 public static class GlobalExceptionMiddlewareExtensions

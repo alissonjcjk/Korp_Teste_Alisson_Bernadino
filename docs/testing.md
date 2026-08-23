@@ -1,8 +1,8 @@
 # Testes e baseline reproduzível
 
-Este documento descreve o portão de qualidade criado na Etapa 1. A suíte registra
-o comportamento atual e protege os fluxos que já funcionam; ela não significa que
-os problemas levantados na análise inicial estejam corrigidos.
+Este documento descreve o portão de qualidade iniciado na Etapa 1 e ampliado na
+Etapa 2. Além do baseline, a suíte agora protege o contrato de erros, model
+binding, validações, códigos HTTP e consumo desse contrato pelo Angular.
 
 ## Verificação completa
 
@@ -22,6 +22,16 @@ dependências já restauradas:
 ```powershell
 pwsh -File .\scripts\verify-stage1.ps1 -SkipRestore
 ```
+
+Para validar especificamente o estado após a Etapa 2, incluindo tipos e
+templates Angular, use:
+
+```powershell
+pwsh -File .\scripts\verify-stage2.ps1 -SkipRestore
+```
+
+A opção `-VerifyDotNet9Container` repete as suítes backend na imagem oficial do
+SDK .NET 9, sem escrever no repositório.
 
 Qualquer comando com código de saída diferente de zero interrompe a verificação.
 
@@ -63,11 +73,10 @@ implementadas.
 
 ## Testes de caracterização
 
-Alguns testes têm o sufixo `AsCurrentBehavior`. Eles documentam defeitos já
-confirmados, como saldo omitido aceito como zero e repetição da mesma referência
-de baixa. Esses testes devem ser invertidos para expressar o comportamento correto
-na etapa responsável pela correção; não devem ser interpretados como aprovação da
-regra atual.
+Alguns testes têm o sufixo `AsCurrentBehavior`. A Etapa 2 inverteu o teste que
+aceitava saldo omitido como zero; omissão agora retorna validação. A repetição da
+mesma referência de baixa continua caracterizada até a etapa de idempotência e não
+deve ser interpretada como aprovação da regra atual.
 
 ## Baseline verificado
 
@@ -75,11 +84,13 @@ Em 22 de agosto de 2026, a verificação integrada obteve:
 
 | Projeto | Aprovados | Falhas | Ignorados |
 | --- | ---: | ---: | ---: |
-| InventoryService | 28 | 0 | 0 |
-| BillingService | 24 | 0 | 0 |
-| Angular | 11 | 0 | 0 |
-| **Total** | **63** | **0** | **0** |
+| InventoryService | 68 | 0 | 0 |
+| BillingService | 71 | 0 | 0 |
+| Angular | 27 | 0 | 0 |
+| **Total** | **166** | **0** | **0** |
 
-Os quatro projetos .NET compilaram em Release com zero erros e zero avisos. O
-bundle Angular de produção também foi gerado; permanece apenas o aviso de template
-`NG8107` que já existia antes desta etapa e não impede a compilação.
+Os quatro projetos .NET compilaram em Release com zero erros e zero avisos. As
+139 verificações backend também passaram dentro da imagem oficial do SDK .NET 9.
+O bundle Angular de produção foi gerado sem o antigo aviso de template `NG8107`.
+O contrato completo da etapa está em
+[api-errors-and-validation.md](api-errors-and-validation.md).

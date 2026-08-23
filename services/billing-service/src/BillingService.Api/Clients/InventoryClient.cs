@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using BillingService.Api.Exceptions;
+using Polly.CircuitBreaker;
 
 namespace BillingService.Api.Clients;
 
@@ -45,15 +46,30 @@ public class InventoryClient : IInventoryClient
 
             return envelope?.Data;
         }
+        catch (BrokenCircuitException ex)
+        {
+            _logger.LogWarning(ex, "Circuit breaker aberto ao consultar produto {ProductId}.", productId);
+            throw new InventoryServiceUnavailableException();
+        }
         catch (HttpRequestException ex)
         {
             _logger.LogError(ex, "Falha ao consultar produto {ProductId} no InventoryService.", productId);
-            throw new InventoryServiceUnavailableException(ex.Message);
+            throw new InventoryServiceUnavailableException();
         }
         catch (TaskCanceledException ex) when (!ct.IsCancellationRequested)
         {
             _logger.LogError(ex, "Timeout ao consultar produto {ProductId} no InventoryService.", productId);
-            throw new InventoryServiceUnavailableException("Timeout na requisição.");
+            throw new InventoryServiceUnavailableException();
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogError(ex, "Resposta inválida ao consultar produto {ProductId} no InventoryService.", productId);
+            throw new InventoryServiceUnavailableException();
+        }
+        catch (NotSupportedException ex)
+        {
+            _logger.LogError(ex, "Formato de resposta não suportado ao consultar produto {ProductId}.", productId);
+            throw new InventoryServiceUnavailableException();
         }
     }
 
@@ -76,15 +92,30 @@ public class InventoryClient : IInventoryClient
 
             return envelope?.Data;
         }
+        catch (BrokenCircuitException ex)
+        {
+            _logger.LogWarning(ex, "Circuit breaker aberto ao consultar saldo do produto {ProductId}.", productId);
+            throw new InventoryServiceUnavailableException();
+        }
         catch (HttpRequestException ex)
         {
             _logger.LogError(ex, "Falha ao consultar saldo do produto {ProductId}.", productId);
-            throw new InventoryServiceUnavailableException(ex.Message);
+            throw new InventoryServiceUnavailableException();
         }
         catch (TaskCanceledException ex) when (!ct.IsCancellationRequested)
         {
             _logger.LogError(ex, "Timeout ao consultar saldo do produto {ProductId}.", productId);
-            throw new InventoryServiceUnavailableException("Timeout na requisição.");
+            throw new InventoryServiceUnavailableException();
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogError(ex, "Resposta inválida ao consultar saldo do produto {ProductId}.", productId);
+            throw new InventoryServiceUnavailableException();
+        }
+        catch (NotSupportedException ex)
+        {
+            _logger.LogError(ex, "Formato de resposta não suportado ao consultar saldo do produto {ProductId}.", productId);
+            throw new InventoryServiceUnavailableException();
         }
     }
 
@@ -113,12 +144,12 @@ public class InventoryClient : IInventoryClient
             if (response.StatusCode == HttpStatusCode.Conflict ||
                 response.StatusCode == HttpStatusCode.BadRequest)
             {
-                var errorBody = await response.Content.ReadAsStringAsync(ct);
                 _logger.LogWarning(
-                    "Estoque insuficiente para produto {ProductId}. Resposta: {Body}",
-                    productId, errorBody);
-                throw new InventoryServiceUnavailableException(
-                    $"Estoque insuficiente ou conflito de concorrência para o produto {productId}.");
+                    "Abatimento rejeitado pelo InventoryService. Produto: {ProductId} | Status: {StatusCode}",
+                    productId, (int)response.StatusCode);
+
+                var message = await ReadBusinessRejectionMessageAsync(response, ct);
+                throw new InventoryOperationRejectedException(message, (int)response.StatusCode);
             }
 
             response.EnsureSuccessStatusCode();
@@ -132,15 +163,60 @@ public class InventoryClient : IInventoryClient
         {
             throw; // Relançar exceção de domínio sem encapsular
         }
+        catch (InventoryOperationRejectedException)
+        {
+            throw;
+        }
+        catch (BrokenCircuitException ex)
+        {
+            _logger.LogWarning(ex, "Circuit breaker aberto ao abater estoque do produto {ProductId}.", productId);
+            throw new InventoryServiceUnavailableException();
+        }
         catch (HttpRequestException ex)
         {
             _logger.LogError(ex, "Falha de rede ao abater estoque do produto {ProductId}.", productId);
-            throw new InventoryServiceUnavailableException(ex.Message);
+            throw new InventoryServiceUnavailableException();
         }
         catch (TaskCanceledException ex) when (!ct.IsCancellationRequested)
         {
             _logger.LogError(ex, "Timeout ao abater estoque do produto {ProductId}.", productId);
-            throw new InventoryServiceUnavailableException("Timeout na requisição de abatimento.");
+            throw new InventoryServiceUnavailableException();
         }
+        catch (JsonException ex)
+        {
+            _logger.LogError(ex, "Resposta inválida ao abater estoque do produto {ProductId}.", productId);
+            throw new InventoryServiceUnavailableException();
+        }
+        catch (NotSupportedException ex)
+        {
+            _logger.LogError(ex, "Formato de resposta não suportado ao abater estoque do produto {ProductId}.", productId);
+            throw new InventoryServiceUnavailableException();
+        }
+    }
+
+    private static async Task<string> ReadBusinessRejectionMessageAsync(
+        HttpResponseMessage response,
+        CancellationToken ct)
+    {
+        try
+        {
+            var error = await response.Content
+                .ReadFromJsonAsync<InventoryApiErrorResponse>(JsonOptions, ct);
+
+            if (!string.IsNullOrWhiteSpace(error?.Message))
+                return error.Message;
+        }
+        catch (JsonException)
+        {
+            // Corpo remoto inválido não deve mudar uma rejeição de negócio para erro técnico.
+        }
+        catch (NotSupportedException)
+        {
+            // Content-Type não suportado: usa mensagem segura abaixo.
+        }
+
+        return response.StatusCode == HttpStatusCode.Conflict
+            ? "O abatimento de estoque foi rejeitado por conflito."
+            : "A solicitação de abatimento de estoque foi rejeitada.";
     }
 }

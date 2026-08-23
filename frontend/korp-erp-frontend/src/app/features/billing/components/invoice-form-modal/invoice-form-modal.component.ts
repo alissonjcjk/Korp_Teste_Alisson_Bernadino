@@ -3,13 +3,14 @@ import {
   ChangeDetectionStrategy, inject, signal, computed
 } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder, Validators, AbstractControl, FormArray, FormGroup } from '@angular/forms';
-import { NgIf, NgFor, CurrencyPipe, DecimalPipe } from '@angular/common';
+import { CurrencyPipe } from '@angular/common';
 import { Product } from '../../../inventory/models/product.model';
 import { ProductService } from '../../../inventory/services/product.service';
-import { Subject, debounceTime, distinctUntilChanged, switchMap, startWith, Observable, map } from 'rxjs';
+import { Subject, debounceTime, distinctUntilChanged, switchMap } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CreateInvoiceRequest, CreateInvoiceItemRequest } from '../../models/invoice.model';
 import { ToastService } from '../../../../core/services/toast.service';
+import { decimalPrecision } from '../../../../core/validators/decimal.validator';
 
 @Component({
   selector: 'app-invoice-form-modal',
@@ -19,6 +20,8 @@ import { ToastService } from '../../../../core/services/toast.service';
   templateUrl: './invoice-form-modal.component.html'
 })
 export class InvoiceFormModalComponent implements OnInit {
+  readonly maxInvoiceItems = 100;
+
   @Input() loading = false;
   @Output() save = new EventEmitter<CreateInvoiceRequest>();
   @Output() cancel = new EventEmitter<void>();
@@ -33,12 +36,20 @@ export class InvoiceFormModalComponent implements OnInit {
   focusedItemIndex = signal<number | null>(null);
 
   // Track selected products to show their names in the input
-  selectedProducts = signal<Record<number, Product>>({});
+  selectedProducts = signal<Partial<Record<number, Product>>>({});
+
+  // numeric(18,4): em JavaScript, usamos o limite superior exclusivo porque
+  // 99.999.999.999.999,9999 não é representável exatamente como number.
+  private readonly storedAmountUpperBound = 100_000_000_000_000;
 
   form = this.fb.group({
-    customerName: [''],
-    notes: [''],
-    items: this.fb.array([], [this.minLengthArray(1)])
+    customerName: ['', Validators.maxLength(255)],
+    notes: ['', Validators.maxLength(1000)],
+    items: this.fb.array([], [
+      this.minLengthArray(1),
+      this.maxLengthArray(this.maxInvoiceItems),
+      this.invoiceTotalWithinStoredPrecision()
+    ])
   });
 
   get itemsFormArray() {
@@ -68,12 +79,24 @@ export class InvoiceFormModalComponent implements OnInit {
     }
   }
 
+  maxLengthArray(max: number) {
+    return (c: AbstractControl): { maxItems: true } | null =>
+      c.value.length <= max ? null : { maxItems: true };
+  }
+
   addItem(): void {
-    const itemGroup = this.fb.group({
-      productId: ['', Validators.required],
-      quantity: [1, [Validators.required, Validators.min(0.01)]],
-      unitPrice: [0, [Validators.required, Validators.min(0)]]
-    });
+    if (this.itemsFormArray.length >= this.maxInvoiceItems) {
+      return;
+    }
+
+    const itemGroup = this.fb.group(
+      {
+        productId: ['', Validators.required],
+        quantity: [1, [Validators.required, Validators.min(0.0001), decimalPrecision(14, 4)]],
+        unitPrice: [0, [Validators.required, Validators.min(0), decimalPrecision(14, 4)]]
+      },
+      { validators: [this.lineTotalWithinStoredPrecision()] }
+    );
     this.itemsFormArray.push(itemGroup);
   }
 
@@ -83,7 +106,7 @@ export class InvoiceFormModalComponent implements OnInit {
     delete updatedSelected[index];
 
     // Shift selected products if needed
-    const newSelected: Record<number, Product> = {};
+    const newSelected: Partial<Record<number, Product>> = {};
     Object.keys(updatedSelected).forEach(key => {
       const numKey = Number(key);
       if (numKey > index) {
@@ -138,7 +161,7 @@ export class InvoiceFormModalComponent implements OnInit {
     const group = this.itemsFormArray.at(index) as FormGroup;
     const qty = group.get('quantity')?.value || 0;
     const price = group.get('unitPrice')?.value || 0;
-    return qty * price;
+    return this.roundLineTotal(qty, price);
   }
 
   calculateInvoiceTotal(): number {
@@ -147,6 +170,53 @@ export class InvoiceFormModalComponent implements OnInit {
       total += this.calculateItemTotal(i);
     }
     return total;
+  }
+
+  private lineTotalWithinStoredPrecision() {
+    return (control: AbstractControl): { lineTotalPrecision: true } | null => {
+      const quantity = Number(control.get('quantity')?.value);
+      const unitPrice = Number(control.get('unitPrice')?.value);
+
+      if (!Number.isFinite(quantity) || !Number.isFinite(unitPrice) || quantity <= 0 || unitPrice < 0) {
+        return null;
+      }
+
+      return this.roundLineTotal(quantity, unitPrice) < this.storedAmountUpperBound
+        ? null
+        : { lineTotalPrecision: true };
+    };
+  }
+
+  private invoiceTotalWithinStoredPrecision() {
+    return (control: AbstractControl): { invoiceTotalPrecision: true } | null => {
+      const items = Array.isArray(control.value) ? control.value : [];
+      let total = 0;
+
+      for (const item of items) {
+        const quantity = Number(item?.quantity);
+        const unitPrice = Number(item?.unitPrice);
+        if (!Number.isFinite(quantity) || !Number.isFinite(unitPrice) || quantity <= 0 || unitPrice < 0) {
+          return null;
+        }
+
+        const lineTotal = this.roundLineTotal(quantity, unitPrice);
+        if (lineTotal >= this.storedAmountUpperBound) {
+          return null;
+        }
+
+        total += lineTotal;
+        if (total >= this.storedAmountUpperBound) {
+          return { invoiceTotalPrecision: true };
+        }
+      }
+
+      return null;
+    };
+  }
+
+  private roundLineTotal(quantity: number, unitPrice: number): number {
+    const scaleFactor = 10 ** 4;
+    return Math.round(quantity * unitPrice * scaleFactor) / scaleFactor;
   }
 
   submit(): void {

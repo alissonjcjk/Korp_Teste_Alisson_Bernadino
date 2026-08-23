@@ -106,20 +106,25 @@ public class ProductService : IProductService
     public async Task<ProductResponse> CreateAsync(
         CreateProductRequest request, CancellationToken ct = default)
     {
+        var code = request.Code!;
+        var description = request.Description!;
+        var stockBalance = request.StockBalance!.Value;
+        var unit = request.Unit!;
+
         // Verifica duplicidade de código (LINQ Any)
         var codeExists = await _context.Products
-            .AnyAsync(p => p.Code.ToLower() == request.Code.ToLower(), ct);
+            .AnyAsync(p => p.Code.ToLower() == code.ToLower(), ct);
 
         if (codeExists)
-            throw new DuplicateProductCodeException(request.Code);
+            throw new DuplicateProductCodeException(code);
 
         var product = new Product
         {
             Id = Guid.NewGuid(),
-            Code = request.Code.Trim().ToUpper(),
-            Description = request.Description.Trim(),
-            StockBalance = request.StockBalance,
-            Unit = request.Unit.Trim().ToUpper(),
+            Code = code.Trim().ToUpper(),
+            Description = description.Trim(),
+            StockBalance = stockBalance,
+            Unit = unit.Trim().ToUpper(),
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };
@@ -137,14 +142,17 @@ public class ProductService : IProductService
     public async Task<ProductResponse> UpdateAsync(
         Guid id, UpdateProductRequest request, CancellationToken ct = default)
     {
+        var description = request.Description!;
+        var unit = request.Unit!;
+
         // FindAsync: busca por PK, mais eficiente que FirstOrDefault
         var product = await _context.Products.FindAsync(new object[] { id }, ct);
 
         if (product is null)
             throw new ProductNotFoundException(id);
 
-        product.Description = request.Description.Trim();
-        product.Unit = request.Unit.Trim().ToUpper();
+        product.Description = description.Trim();
+        product.Unit = unit.Trim().ToUpper();
         product.UpdatedAt = DateTime.UtcNow;
 
         await _context.SaveChangesAsync(ct);
@@ -158,6 +166,9 @@ public class ProductService : IProductService
     public async Task<StockBalanceResponse> DeductStockAsync(
         Guid id, DeductStockRequest request, CancellationToken ct = default)
     {
+        var quantity = request.Quantity!.Value;
+        var invoiceReference = request.InvoiceReference!;
+
         // ATENÇÃO: Precisamos do tracking aqui (sem AsNoTracking)
         // para que o EF Core detecte o xmin e aplique OCC
         var product = await _context.Products.FindAsync(new object[] { id }, ct);
@@ -165,10 +176,10 @@ public class ProductService : IProductService
         if (product is null)
             throw new ProductNotFoundException(id);
 
-        if (product.StockBalance < request.Quantity)
-            throw new InsufficientStockException(product.Code, request.Quantity, product.StockBalance);
+        if (product.StockBalance < quantity)
+            throw new InsufficientStockException(product.Code, quantity, product.StockBalance);
 
-        product.StockBalance -= request.Quantity;
+        product.StockBalance -= quantity;
         product.UpdatedAt = DateTime.UtcNow;
 
         try
@@ -183,7 +194,7 @@ public class ProductService : IProductService
 
         _logger.LogInformation(
             "Estoque abatido. Produto: {Code} | NF: {Invoice} | Quantidade: {Qty} | Saldo restante: {Balance}",
-            product.Code, request.InvoiceReference, request.Quantity, product.StockBalance);
+            product.Code, invoiceReference, quantity, product.StockBalance);
 
         return new StockBalanceResponse
         {

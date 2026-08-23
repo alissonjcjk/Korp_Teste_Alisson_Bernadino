@@ -20,6 +20,7 @@ public class InvoicesController : ControllerBase
 
     [HttpGet]
     [ProducesResponseType(typeof(ApiResponse<IEnumerable<InvoiceSummaryResponse>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> GetAll(CancellationToken ct)
     {
         var invoices = await _invoiceService.GetAllAsync(ct);
@@ -28,7 +29,8 @@ public class InvoicesController : ControllerBase
 
     [HttpGet("{id:guid}")]
     [ProducesResponseType(typeof(ApiResponse<InvoiceResponse>), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> GetById(Guid id, CancellationToken ct)
     {
         var invoice = await _invoiceService.GetByIdAsync(id, ct);
@@ -36,8 +38,14 @@ public class InvoicesController : ControllerBase
     }
 
     [HttpPost]
+    [Consumes("application/json")]
     [ProducesResponseType(typeof(ApiResponse<InvoiceResponse>), StatusCodes.Status201Created)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status415UnsupportedMediaType)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status503ServiceUnavailable)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> Create([FromBody] CreateInvoiceRequest request, CancellationToken ct)
     {
         var invoice = await _invoiceService.CreateAsync(request, ct);
@@ -50,21 +58,43 @@ public class InvoicesController : ControllerBase
 
     [HttpPost("{id:guid}/print")]
     [ProducesResponseType(typeof(ApiResponse<InvoiceResponse>), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status409Conflict)]
-    [ProducesResponseType(StatusCodes.Status503ServiceUnavailable)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status503ServiceUnavailable)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> Print(
-        Guid id, 
+        Guid id,
         [FromHeader(Name = "Idempotency-Key")] string? idempotencyKey,
         CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(idempotencyKey))
         {
-            return BadRequest(ApiResponse<object>.Fail("O cabeçalho 'Idempotency-Key' é obrigatório."));
+            const string message = "O cabeçalho 'Idempotency-Key' é obrigatório.";
+            return BadRequest(ApiErrorResponseFactory.Create(
+                HttpContext,
+                StatusCodes.Status400BadRequest,
+                ApiErrorResponseFactory.ValidationMessage,
+                HeaderErrors(message)));
+        }
+
+        if (idempotencyKey.Length > 100)
+        {
+            const string message = "O cabeçalho 'Idempotency-Key' não pode ultrapassar 100 caracteres.";
+            return BadRequest(ApiErrorResponseFactory.Create(
+                HttpContext,
+                StatusCodes.Status400BadRequest,
+                ApiErrorResponseFactory.ValidationMessage,
+                HeaderErrors(message)));
         }
 
         var invoice = await _invoiceService.PrintAsync(id, idempotencyKey, ct);
         return Ok(ApiResponse<InvoiceResponse>.Ok(invoice, "Nota fiscal impressa e fechada com sucesso."));
     }
+
+    private static IReadOnlyDictionary<string, string[]> HeaderErrors(string message) =>
+        new Dictionary<string, string[]>
+        {
+            ["Idempotency-Key"] = new[] { message }
+        };
 }
