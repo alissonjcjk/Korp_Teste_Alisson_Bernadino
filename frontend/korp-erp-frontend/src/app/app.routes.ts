@@ -3,8 +3,10 @@ import { Routes } from '@angular/router';
 export const routes: Routes = [
   {
     path: '',
-    redirectTo: '/produtos',
-    pathMatch: 'full'
+    loadComponent: () =>
+      import('./features/home/pages/home-page/home-page.component')
+        .then(m => m.HomePageComponent),
+    title: 'Home — Korp ERP'
   },
   {
     path: 'produtos',

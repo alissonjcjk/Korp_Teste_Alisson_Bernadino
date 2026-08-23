@@ -86,7 +86,7 @@
               <th>Status</th>
               <th>Itens</th>
               <th>Total</th>
-              <th class="text-right">Ações</th>
+              <th class="!text-center">Ações</th>
             </tr>
           </thead>
           <tbody>
@@ -117,7 +117,7 @@
                 <td class="text-surface-400 text-sm">{{ invoice.itemCount }} item(s)</td>
                 <td class="font-semibold text-primary-400">{{ invoice.totalAmount | currency:'BRL' }}</td>
                 <td>
-                  <div class="flex items-center justify-end gap-2">
+                  <div class="flex items-center justify-center gap-2">
                     <button (click)="analyzeInvoice(invoice)"
                             [disabled]="analyzingId() !== null"
                             class="w-8 h-8 flex items-center justify-center rounded-lg text-violet-300

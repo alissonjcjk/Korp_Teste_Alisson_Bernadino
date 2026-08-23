@@ -17,8 +17,9 @@
   }
 
   body {
-    @apply bg-surface-950 text-surface-100 font-sans antialiased;
-    background: linear-gradient(135deg, #020617 0%, #0f172a 50%, #1e1b4b 100%);
+    @apply text-surface-100 font-sans antialiased;
+    background: linear-gradient(180deg, #2563eb 0%, #1e3a8a 30%, #0f172a 100%);
+    background-attachment: fixed;
     min-height: 100vh;
   }
 
