@@ -7,11 +7,20 @@ import { InvoiceService } from '../../services/invoice.service';
 import { ToastService } from '../../../../core/services/toast.service';
 import { InvoiceSummaryResponse, CreateInvoiceRequest } from '../../models/invoice.model';
 import { InvoiceFormModalComponent } from '../../components/invoice-form-modal/invoice-form-modal.component';
+import { InvoiceAiAnalysisResponse } from '../../models/ai-analysis.model';
+import { AiAnalysisModalComponent } from '../../components/ai-analysis-modal/ai-analysis-modal.component';
 
 @Component({
   selector: 'app-invoices-page',
   standalone: true,
-  imports: [NgClass, DatePipe, CurrencyPipe, FormsModule, InvoiceFormModalComponent],
+  imports: [
+    NgClass,
+    DatePipe,
+    CurrencyPipe,
+    FormsModule,
+    InvoiceFormModalComponent,
+    AiAnalysisModalComponent
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './invoices-page.component.html'
 })
@@ -24,7 +33,11 @@ export class InvoicesPageComponent implements OnInit {
   loading = signal(false);
   saving = signal(false);
   printingId = signal<string | null>(null);
+  analyzingId = signal<string | null>(null);
   showModal = signal(false);
+  showAiModal = signal(false);
+  selectedAiInvoiceNumber = signal(0);
+  aiAnalysis = signal<InvoiceAiAnalysisResponse | null>(null);
   searchTerm = signal('');
 
   // Computed
@@ -91,6 +104,41 @@ export class InvoicesPageComponent implements OnInit {
       },
       error: () => { this.printingId.set(null); }
     });
+  }
+
+  analyzeInvoice(invoice: InvoiceSummaryResponse): void {
+    if (this.analyzingId() !== null) {
+      return;
+    }
+
+    this.selectedAiInvoiceNumber.set(invoice.invoiceNumber);
+    this.aiAnalysis.set(null);
+    this.showAiModal.set(true);
+    this.analyzingId.set(invoice.id);
+
+    this.invoiceService.analyzeWithAi(invoice.id).subscribe({
+      next: analysis => {
+        this.aiAnalysis.set(analysis);
+        this.analyzingId.set(null);
+      },
+      error: () => {
+        this.aiAnalysis.set({
+          isAvailable: false,
+          hasAnomalies: false,
+          riskLevel: 'unavailable',
+          summary: 'Não foi possível acessar a análise inteligente. A impressão continua disponível normalmente.',
+          risks: [],
+          suggestions: [],
+          provider: 'Google Gemini',
+          analyzedAt: new Date().toISOString()
+        });
+        this.analyzingId.set(null);
+      }
+    });
+  }
+
+  closeAiModal(): void {
+    this.showAiModal.set(false);
   }
 
   getStatusLabel(status: string): string {

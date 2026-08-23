@@ -7,6 +7,7 @@ import {
   InvoiceResponse,
   CreateInvoiceRequest
 } from '../models/invoice.model';
+import { InvoiceAiAnalysisResponse } from '../models/ai-analysis.model';
 
 @Injectable({ providedIn: 'root' })
 export class InvoiceService {
@@ -36,6 +37,12 @@ export class InvoiceService {
       .post<ApiResponse<InvoiceResponse>>(`${this.baseUrl}/${id}/print`, null, {
         headers: { 'Idempotency-Key': idempotencyKey }
       })
+      .pipe(map(r => r.data));
+  }
+
+  analyzeWithAi(id: string): Observable<InvoiceAiAnalysisResponse> {
+    return this.http
+      .post<ApiResponse<InvoiceAiAnalysisResponse>>(`${this.baseUrl}/${id}/ai-analysis`, null)
       .pipe(map(r => r.data));
   }
 }
