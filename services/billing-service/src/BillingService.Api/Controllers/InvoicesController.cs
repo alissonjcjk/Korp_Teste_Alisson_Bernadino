@@ -37,6 +37,25 @@ public class InvoicesController : ControllerBase
         return Ok(ApiResponse<InvoiceResponse>.Ok(invoice));
     }
 
+    [HttpPost("{id:guid}/ai-analysis")]
+    [ProducesResponseType(typeof(ApiResponse<InvoiceAiAnalysisResponse>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ApiErrorResponse), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> AnalyzeWithAi(
+        Guid id,
+        [FromServices] IInvoiceAiAnalyzer analyzer,
+        CancellationToken ct)
+    {
+        var invoice = await _invoiceService.GetByIdAsync(id, ct);
+        var analysis = await analyzer.AnalyzeAsync(invoice, ct);
+
+        var message = analysis.IsAvailable
+            ? "Análise inteligente concluída."
+            : "Análise inteligente indisponível no momento.";
+
+        return Ok(ApiResponse<InvoiceAiAnalysisResponse>.Ok(analysis, message));
+    }
+
     [HttpPost]
     [Consumes("application/json")]
     [ProducesResponseType(typeof(ApiResponse<InvoiceResponse>), StatusCodes.Status201Created)]

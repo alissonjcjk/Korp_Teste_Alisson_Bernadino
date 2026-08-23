@@ -118,6 +118,22 @@
                 <td class="font-semibold text-primary-400">{{ invoice.totalAmount | currency:'BRL' }}</td>
                 <td>
                   <div class="flex items-center justify-end gap-2">
+                    <button (click)="analyzeInvoice(invoice)"
+                            [disabled]="analyzingId() !== null"
+                            class="w-8 h-8 flex items-center justify-center rounded-lg text-violet-300
+                                   hover:text-violet-200 hover:bg-violet-950/50 transition-all duration-150
+                                   disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Analisar com IA"
+                            [attr.aria-label]="'Analisar NF ' + invoice.invoiceNumber + ' com inteligência artificial'">
+                      @if (analyzingId() === invoice.id) {
+                        <span class="spinner w-4 h-4"></span>
+                      } @else {
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"
+                                d="M9.813 15.904L9 18l-.813-2.096a4.5 4.5 0 00-2.591-2.591L3.5 12.5l2.096-.813a4.5 4.5 0 002.591-2.591L9 7l.813 2.096a4.5 4.5 0 002.591 2.591l2.096.813-2.096.813a4.5 4.5 0 00-2.591 2.591zM18.259 8.715L18 9.5l-.259-.785a2.25 2.25 0 00-1.456-1.456L15.5 7l.785-.259a2.25 2.25 0 001.456-1.456L18 4.5l.259.785a2.25 2.25 0 001.456 1.456L20.5 7l-.785.259a2.25 2.25 0 00-1.456 1.456z"/>
+                        </svg>
+                      }
+                    </button>
                     @if (invoice.status === 'Open') {
                       <button (click)="printInvoice(invoice)"
                               [disabled]="printingId() === invoice.id"
@@ -153,5 +169,14 @@
     [loading]="saving()"
     (save)="onSave($event)"
     (cancel)="closeModal()"
+  />
+}
+
+@if (showAiModal()) {
+  <app-ai-analysis-modal
+    [invoiceNumber]="selectedAiInvoiceNumber()"
+    [loading]="analyzingId() !== null"
+    [analysis]="aiAnalysis()"
+    (close)="closeAiModal()"
   />
 }

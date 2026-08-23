@@ -63,6 +63,27 @@ builder.Services.AddHttpClient<IInventoryClient, InventoryClient>(client =>
 // ── Application Services ─────────────────────────────────────────────────────
 builder.Services.AddScoped<IInvoiceService, InvoiceService>();
 
+// ── Análise consultiva de notas fiscais com Gemini ───────────────────────────
+builder.Services.Configure<GeminiOptions>(options =>
+{
+    builder.Configuration.GetSection(GeminiOptions.SectionName).Bind(options);
+
+    var environmentApiKey = builder.Configuration["GEMINI_API_KEY"];
+    if (!string.IsNullOrWhiteSpace(environmentApiKey))
+        options.ApiKey = environmentApiKey;
+});
+
+var geminiTimeoutSeconds = Math.Clamp(
+    builder.Configuration.GetValue<int?>("Gemini:TimeoutSeconds") ?? 8,
+    3,
+    30);
+
+builder.Services.AddHttpClient<IInvoiceAiAnalyzer, GeminiInvoiceAiAnalyzer>(client =>
+{
+    client.BaseAddress = new Uri("https://generativelanguage.googleapis.com/v1beta/");
+    client.Timeout = TimeSpan.FromSeconds(geminiTimeoutSeconds);
+});
+
 // ── MassTransit (RabbitMQ + EF Core Outbox) ────────────────────────────────
 builder.Services.AddMassTransit(x =>
 {

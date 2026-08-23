@@ -1,50 +1,290 @@
-# Detalhamento Técnico - Sistema de Emissão de Notas Fiscais
+# Detalhamento técnico — Korp ERP
 
-Este documento apresenta o detalhamento técnico da solução desenvolvida, conforme as especificações solicitadas no teste.
+Este documento descreve as decisões técnicas, os fluxos e as bibliotecas usadas
+no sistema de controle de estoque e emissão de notas fiscais. Ele complementa o
+[`README.md`](README.md), que contém a apresentação e as instruções de execução.
 
-## 1. Quais ciclos de vida do Angular foram utilizados?
-Foram utilizados os seguintes *Lifecycle Hooks* no frontend:
-- **`ngOnInit`**: Utilizado amplamente (`ProductsPageComponent`, `InvoicesPageComponent` e `InvoiceFormModalComponent`) para disparar as requisições iniciais às APIs, carregar a listagem de dados e popular os formulários reativos assim que os componentes são renderizados na tela.
+## Sumário
 
-## 2. Uso da biblioteca RxJS
-Sim, a biblioteca **RxJS** foi utilizada de forma extensiva e reativa no projeto:
-- **Transformação de Dados (`map`)**: Utilizado nos *Services* para desembrulhar o contrato padrão do backend (`ApiResponse<T>`) e repassar apenas os dados puros para os componentes visuais.
-- **Busca em Tempo Real (Autocomplete/Typeahead)**: Na tela de inclusão de itens da Nota Fiscal, utilizamos um `Subject` atrelado aos operadores `debounceTime(300)` (para não enviar requisições a cada tecla digitada), `distinctUntilChanged` (evita requisições se a busca não mudou) e `switchMap` (cancela requisições anteriores caso o usuário digite rápido demais). Isso garante uma pesquisa de produtos no banco extremamente performática.
+- [1. Visão geral da arquitetura](#1-visão-geral-da-arquitetura)
+- [2. Frontend Angular](#2-frontend-angular)
+- [3. Backend e persistência](#3-backend-e-persistência)
+- [4. Fluxos principais](#4-fluxos-principais)
+- [5. Contratos, validações e erros](#5-contratos-validações-e-erros)
+- [6. Resiliência e consistência](#6-resiliência-e-consistência)
+- [7. Inteligência Artificial](#7-inteligência-artificial)
+- [8. Testes e documentação](#8-testes-e-documentação)
+- [9. Respostas objetivas ao desafio](#9-respostas-objetivas-ao-desafio)
+- [10. Limites conhecidos e próximos passos](#10-limites-conhecidos-e-próximos-passos)
 
-## 3. Quais outras bibliotecas foram utilizadas e para qual finalidade?
-No frontend, além do núcleo do Angular:
-- **Tailwind CSS (v3)**: Utilizado para construção do design system e estilização utility-first, dispensando a escrita de arquivos CSS gigantes e permitindo a rápida criação da interface baseada em *Glassmorphism*.
+## 1. Visão geral da arquitetura
 
-## 4. Para componentes visuais, quais bibliotecas foram utilizadas?
-**Nenhuma biblioteca externa de componentes visuais** (como Angular Material, Bootstrap ou PrimeNG) foi utilizada. 
-Optou-se por construir todos os componentes do zero (Tabelas, Modais, Dropdowns, Badges, Botões) focando em entregar um design exclusivo, altamente polido, moderno (premium) e responsivo, demonstrando total domínio sobre HTML e CSS (via Tailwind).
+A solução segue uma arquitetura de microsserviços, com bancos separados para
+estoque e faturamento. O frontend consome as APIs por HTTP e o fechamento da
+nota publica um evento no RabbitMQ para que a baixa de estoque seja processada.
 
-## 5. Gerenciamento de dependências no Golang
-*Não aplicável.* O projeto foi desenvolvido integralmente utilizando o ecossistema C# (.NET).
+```mermaid
+flowchart LR
+    UI[Angular 19] -->|HTTP| INV[Inventory Service<br/>ASP.NET Core 9]
+    UI -->|HTTP| BILL[Billing Service<br/>ASP.NET Core 9]
+    BILL -->|Consulta de produtos| INV
+    BILL -->|InvoicePrintedEvent| MQ[(RabbitMQ)]
+    MQ -->|Consumer| INV
+    INV --> IDB[(inventory_db<br/>PostgreSQL)]
+    BILL --> BDB[(billing_db<br/>PostgreSQL)]
+    BILL -.->|Análise opcional| AI[Google Gemini]
+```
 
-## 6. Quais frameworks foram utilizados no Golang ou C#?
-No ecossistema **C#**, foram adotados os seguintes frameworks e bibliotecas nos microsserviços (Inventory e Billing):
-- **ASP.NET Core 9.0**: Framework base para a construção das Web APIs.
-- **Entity Framework Core (EF Core 9)**: ORM utilizado para a persistência e mapeamento objeto-relacional com o banco de dados PostgreSQL.
-- **Polly**: Biblioteca de resiliência. Utilizada no `BillingService` para criar políticas de *Retry* e *Circuit Breaker* ao se comunicar via HTTP com o `InventoryService`, garantindo robustez a falhas de rede.
-- **Serilog**: Utilizado para captura e formatação centralizada de logs estruturados da aplicação (console/file).
-- **Npgsql**: Provider oficial de banco de dados do PostgreSQL para .NET e EF Core.
+### Responsabilidades
 
-## 7. Como foram tratados os erros e exceções no backend?
-Foi construída uma arquitetura baseada em **Exceções de Domínio Customizadas** (Domain Exceptions) unida a um **Middleware de Interceptação Global** (`GlobalExceptionHandlerMiddleware`):
-- O fluxo de negócio lança exceções especializadas, como `ProductNotFoundException`, `InsufficientStockException`, `DuplicateIdempotencyKeyException`, ou `ConcurrencyConflictException`.
-- O Middleware global (que envelopa todo o request) captura qualquer falha e as mapeia para o Status HTTP adequado (ex: `404 Not Found`, `400 Bad Request`, `409 Conflict`).
-- O retorno é *sempre* padronizado no envelope `ApiResponse<T>`, garantindo que o frontend consiga tratar o feedback adequadamente (ex: "Estoque insuficiente") em vez de quebrar a aplicação.
+| Componente | Responsabilidade |
+| --- | --- |
+| Angular | Cadastro e consulta de produtos, criação e impressão de notas e análise consultiva por IA |
+| Inventory Service | Catálogo de produtos, saldo, baixa e concorrência de estoque |
+| Billing Service | Criação, consulta, totalização, fechamento e análise das notas fiscais |
+| PostgreSQL | Persistência isolada de cada contexto de negócio |
+| RabbitMQ + MassTransit | Comunicação assíncrona do evento de impressão |
+| Google Gemini | Análise opcional e consultiva dos dados da nota |
 
-## 8. Uso de LINQ e de que forma
-Sim, o **LINQ** foi utilizado de ponta a ponta na camada de Serviços do backend. Formas de uso:
-- **Projeções Diretas (`.Select()`)**: Usado para extrair dados diretamente para os DTOs (`ProductResponse`, `StockBalanceResponse`), evitando os problemas de *over-fetching* (trazer dados excessivos do banco) inerentes ao uso puro do EF Core.
-- **Filtros Dinâmicos (`.Where()`)**: Na busca de produtos (ProductsController), o `Where` condicional é injetado na árvore de expressões (`IQueryable`) para buscar termos no código ou na descrição.
-- **Lógica e Agregação (`.AnyAsync()`, `.MaxAsync()`)**: O `.AnyAsync` foi usado para validação rápida de chaves únicas (ex: códigos de produto já cadastrados). O `.MaxAsync` foi utilizado na geração inteligente do número sequencial (auto-incremento manual) das Notas Fiscais no momento da criação.
+## 2. Frontend Angular
 
----
+O frontend foi implementado com Angular 19, standalone components, formulários
+reativos e carregamento preguiçoso das páginas. A estilização utiliza Tailwind
+CSS e os elementos visuais foram construídos no próprio projeto, sem Angular
+Material, Bootstrap ou PrimeNG.
 
-### Bônus: Requisitos Opcionais Implementados 🚀
+### Organização
 
-- **Tratamento de Concorrência (OCC)**: O abatimento de estoque no `InventoryService` utiliza o conceito de concorrência otimista (Optimistic Concurrency Control) valendo-se do campo nativo `xmin` do PostgreSQL. Se duas notas tentarem abater o mesmo produto no exato mesmo milissegundo, a transação da segunda nota irá detectar conflito de concorrência e não deixará o estoque ficar negativo ou corrompido, disparando um erro apropriado (Status 409).
-- **Implementação de Idempotência**: O endpoint de "Impressão de Nota Fiscal" (o que aciona a baixa do estoque) requer o envio do cabeçalho `Idempotency-Key` pelo frontend. Essa chave é atrelada à NF no banco. Se o request sofrer *timeout*, falha de rede intermitente e tentar ser disparado novamente (*retry* do Polly), a idempotência reconhecerá a chave e retornará sucesso imediato sem deduzir o estoque duas vezes.
+- `core`: interceptadores, modelos compartilhados, serviços e validadores;
+- `features/inventory`: página, formulário, modelos e serviço de produtos;
+- `features/billing`: página, formulários, modelos, serviço e modal de IA;
+- `shared`: componentes reutilizáveis, como o contêiner de notificações.
+
+### Estado e reatividade
+
+- `signal` mantém estados locais como listagens, carregamento e modal ativo;
+- `computed` deriva listas filtradas sem duplicar estado;
+- `Subject`, `debounceTime`, `distinctUntilChanged` e `switchMap` implementam o
+  autocomplete de produtos;
+- `map` extrai os dados do envelope padrão das APIs;
+- `catchError` centraliza a normalização das falhas HTTP no interceptor.
+
+### Ciclo de vida
+
+`ngOnInit` é usado nas páginas de produtos e notas para carregar os dados
+iniciais. No formulário de nota, ele também inicia o fluxo reativo de busca de
+produtos. Assinaturas que precisam acompanhar o componente são encerradas pelo
+mecanismo de destruição do Angular, evitando vazamentos.
+
+## 3. Backend e persistência
+
+Os dois serviços usam ASP.NET Core 9 e uma separação simples por controllers,
+DTOs, validadores, serviços de aplicação, modelos e acesso a dados.
+
+### Principais tecnologias
+
+| Tecnologia | Uso |
+| --- | --- |
+| ASP.NET Core 9 | Web APIs, middleware, health checks e injeção de dependência |
+| Entity Framework Core 9 | Mapeamento, consultas, transações e migrations |
+| Npgsql | Provider PostgreSQL e convenção `snake_case` |
+| FluentValidation | Regras de entrada desacopladas dos controllers |
+| MassTransit | Publicação e consumo do evento de impressão |
+| Polly | Retry e circuit breaker nas chamadas Billing → Inventory |
+| Serilog | Logs estruturados e rastreáveis |
+| Swashbuckle | OpenAPI e Swagger UI |
+
+Cada microsserviço possui seu próprio `DbContext`, banco e migrations. As
+migrations são aplicadas na inicialização. O PostgreSQL utiliza `numeric(18,4)`
+para saldos, quantidades, preços e totais.
+
+## 4. Fluxos principais
+
+### Cadastro de produto
+
+1. O Angular valida os campos obrigatórios e a precisão decimal.
+2. O Inventory Service repete as validações com FluentValidation.
+3. O código é verificado quanto à duplicidade.
+4. O produto é persistido e devolvido no envelope padrão de sucesso.
+
+### Criação de nota fiscal
+
+1. O usuário adiciona de 1 a 100 itens pelo autocomplete.
+2. O Billing Service consulta o Inventory Service para obter os dados atuais dos
+   produtos.
+3. Totais de linha e da nota são calculados e arredondados para quatro casas.
+4. A nota é criada no estado aberto.
+
+### Impressão e baixa de estoque
+
+1. O Angular envia a impressão com um `Idempotency-Key`.
+2. O Billing Service fecha a nota e publica `InvoicePrintedEvent` pelo
+   MassTransit.
+3. O Inventory Service consome o evento e baixa os itens em uma transação.
+4. O controle otimista de concorrência do PostgreSQL impede atualização perdida
+   do saldo.
+
+A impressão e a baixa pertencem a transações e serviços diferentes. Por isso,
+as garantias distribuídas e seus limites são explicitados na seção
+[Limites conhecidos](#10-limites-conhecidos-e-próximos-passos).
+
+## 5. Contratos, validações e erros
+
+Respostas bem-sucedidas usam `ApiResponse<T>`. Erros usam um contrato comum nos
+dois serviços:
+
+```json
+{
+  "success": false,
+  "statusCode": 400,
+  "message": "Um ou mais erros de validação ocorreram.",
+  "errors": {
+    "StockBalance": ["O saldo inicial é obrigatório."]
+  },
+  "traceId": "0HN...",
+  "timestamp": "2026-08-22T22:00:00+00:00"
+}
+```
+
+O middleware global converte falhas conhecidas em 400, 404, 409 ou 503 e mantém
+mensagens internas fora da resposta. Erros inesperados retornam 500 com mensagem
+genérica. `traceId` permite correlacionar o retorno aos logs.
+
+Os DTOs são validados pelo FluentValidation. O Angular antecipa as mesmas regras
+para melhorar a experiência, mas o backend permanece como fonte de verdade.
+Precisão decimal, campos obrigatórios, limites de texto, item nulo, quantidade
+máxima de itens e valores totais são protegidos antes da persistência.
+
+O contrato completo está em
+[`docs/api-errors-and-validation.md`](docs/api-errors-and-validation.md).
+
+## 6. Resiliência e consistência
+
+### Implementado
+
+- retry e circuit breaker nas chamadas do Billing para o Inventory;
+- health checks dos bancos;
+- transação na baixa dos itens de uma nota;
+- concorrência otimista baseada no `xmin` do PostgreSQL;
+- chave de idempotência única no fechamento da nota;
+- EF Core Bus Outbox no Billing Service para publicação ligada ao contexto;
+- timeout e fallback na integração opcional com IA;
+- logs estruturados e respostas com `traceId`.
+
+### Escopo atual da idempotência
+
+A mesma chave de impressão pode ser repetida de forma segura no fluxo serial. A
+proteção ainda não equivale a uma garantia distribuída completa: impressões
+simultâneas com chaves diferentes e redelivery após determinados pontos do
+consumer exigem as melhorias listadas na seção 10.
+
+## 7. Inteligência Artificial
+
+A ação **Analisar com IA** é independente da impressão. O Billing Service chama
+o Google Gemini com o modelo configurado, atualmente
+`gemini-3.5-flash-lite`, e solicita uma resposta estruturada por JSON Schema.
+
+A análise contém:
+
+- resumo consultivo;
+- indicação e nível de risco;
+- pontos que merecem conferência;
+- sugestões objetivas;
+- provedor e horário da análise.
+
+Somente número, status, total e itens são enviados. Nome do cliente e observações
+não são compartilhados. Descrições e códigos são tratados como conteúdo não
+confiável, a resposta é validada pelo backend e a análise não toma decisões nem
+altera a nota.
+
+Se a chave estiver ausente, houver timeout, erro HTTP ou resposta inválida, a API
+retorna um resultado indisponível amigável. Cadastro e impressão permanecem
+funcionais. A configuração está documentada em
+[`docs/ai-invoice-analysis.md`](docs/ai-invoice-analysis.md).
+
+## 8. Testes e documentação
+
+Há testes de unidade e contrato para Inventory Service, Billing Service e
+Angular. Eles cobrem validadores, serviços, mapeamentos, controllers, middleware,
+contratos HTTP, interceptador e formulários.
+
+Comandos principais:
+
+```powershell
+dotnet test .\Korp.Erp.slnx --configuration Release
+
+Set-Location .\frontend\korp-erp-frontend
+npm run test:ci
+```
+
+O histórico do baseline e os scripts de verificação estão descritos em
+[`docs/testing.md`](docs/testing.md). Conforme solicitado para a entrega rápida
+do bônus, a integração de IA foi verificada manualmente e não recebeu uma suíte
+automatizada específica.
+
+## 9. Respostas objetivas ao desafio
+
+### Quais ciclos de vida do Angular foram utilizados?
+
+Principalmente `ngOnInit`, para carregar listagens e iniciar o fluxo de busca do
+formulário de nota. A destruição das assinaturas é vinculada ao ciclo de vida do
+componente.
+
+### RxJS foi utilizado? De que forma?
+
+Sim. `Subject`, `debounceTime`, `distinctUntilChanged` e `switchMap` compõem o
+autocomplete; `map` transforma respostas; `catchError` normaliza as falhas HTTP
+no interceptor global.
+
+### Quais outras bibliotecas foram utilizadas?
+
+No frontend, Tailwind CSS para estilização. No backend, EF Core, Npgsql,
+FluentValidation, MassTransit, Polly, Serilog e Swashbuckle, conforme detalhado
+na seção 3.
+
+### Quais bibliotecas de componentes visuais foram utilizadas?
+
+Nenhuma biblioteca pronta de componentes. Tabelas, formulários, modais, badges,
+botões e notificações foram construídos com Angular, HTML e Tailwind CSS.
+
+### Como as dependências são gerenciadas no Go?
+
+Não aplicável. A alternativa escolhida no desafio foi C#/.NET. Dependências .NET
+são declaradas nos arquivos `.csproj`; as do Angular ficam em `package.json` e
+`package-lock.json`.
+
+### Quais frameworks foram utilizados no C#?
+
+ASP.NET Core 9 para as APIs e Entity Framework Core 9 para persistência, além das
+bibliotecas descritas na seção 3.
+
+### Como erros e exceções foram tratados?
+
+Exceções de domínio e falhas de infraestrutura são centralizadas por middleware.
+O middleware escolhe o status HTTP, produz o envelope seguro e registra os
+detalhes técnicos apenas no servidor.
+
+### LINQ foi utilizado?
+
+Sim. `Where` implementa filtros, `Select` projeta entidades em DTOs, `AnyAsync`
+verifica existência/duplicidade e agregações auxiliam regras e consultas. As
+operações são mantidas em `IQueryable` quando devem ser traduzidas para SQL.
+
+## 10. Limites conhecidos e próximos passos
+
+Os itens abaixo são mantidos visíveis para diferenciar proteções existentes de
+garantias ainda não implementadas:
+
+1. tornar o fechamento da nota atômico diante de duas impressões simultâneas com
+   chaves diferentes;
+2. ativar o Entity Framework Inbox no endpoint consumidor e configurar
+   redelivery/retry controlado;
+3. garantir recuperação ou compensação quando a nota é fechada, mas a baixa
+   assíncrona falha;
+4. adicionar testes reais de concorrência e integração com PostgreSQL/RabbitMQ;
+5. executar a chamada real de IA com um projeto Google autorizado — o fallback
+   já está funcional, mas o projeto usado na validação retornou
+   `PERMISSION_DENIED`.
+
+Esses pontos não impedem a demonstração dos fluxos principais, mas são os
+próximos passos recomendados antes de um cenário de produção.
