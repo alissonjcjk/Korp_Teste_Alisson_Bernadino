@@ -1,1 +1,40 @@
-<p>home-page works!</p>
+<div class="relative w-full h-[calc(100vh-64px)] flex overflow-hidden">
+  
+  <!-- Left Side: Text -->
+  <div class="relative z-10 flex flex-col justify-center w-1/2 h-full p-16">
+    <h1 class="text-5xl font-bold text-white mb-6 leading-tight">
+      A Revolução do seu <br>
+      <span class="text-gradient">Gestor de Negócios</span>
+    </h1>
+    <p class="text-surface-400 text-lg mb-8 max-w-md leading-relaxed">
+      Controle de produtos, notas fiscais e relatórios inteligentes com a velocidade e o design premium que o seu fluxo de trabalho merece.
+    </p>
+    
+    <div class="flex gap-4">
+      <a routerLink="/produtos" class="btn-primary w-fit text-lg px-8 py-3">Ver Produtos</a>
+      <a routerLink="/notas-fiscais" class="btn-secondary w-fit text-lg px-8 py-3 border border-surface-700 bg-surface-900/50 hover:bg-surface-800 transition-colors">Acessar Notas</a>
+    </div>
+  </div>
+
+  <!-- Right Side: Fading Slider -->
+  <div class="absolute right-0 top-0 h-full w-1/2 mask-gradient overflow-hidden">
+    <!-- Slider Container -->
+    <div class="flex h-full w-[200%] transition-transform duration-1000 ease-in-out"
+         [style.transform]="'translateX(-' + (currentIndex() * 50) + '%)'">
+      
+      <!-- Slide 1 -->
+      <div class="w-1/2 h-full flex items-center justify-center p-8">
+        <img src="/assets/erp2.png" alt="ERP Dashboard 1" 
+             class="w-full max-h-[80%] object-contain rounded-2xl shadow-2xl border border-white/10" />
+      </div>
+
+      <!-- Slide 2 -->
+      <div class="w-1/2 h-full flex items-center justify-center p-8">
+        <img src="/assets/erp4.png" alt="ERP Dashboard 2" 
+             class="w-full max-h-[80%] object-contain rounded-2xl shadow-2xl border border-white/10" />
+      </div>
+      
+    </div>
+  </div>
+
+</div>
