@@ -4,7 +4,7 @@
 
 ### Estoque e emissão de notas fiscais em uma arquitetura de microsserviços
 
-Angular 19 · ASP.NET Core 9 · PostgreSQL · RabbitMQ · Google Gemini
+Angular 19 · ASP.NET Core 9 · PostgreSQL · RabbitMQ · Groq
 
 [![.NET](https://img.shields.io/badge/.NET-9.0-512BD4?logo=dotnet&logoColor=white)](https://dotnet.microsoft.com/)
 [![Angular](https://img.shields.io/badge/Angular-19-DD0031?logo=angular&logoColor=white)](https://angular.dev/)
@@ -35,7 +35,7 @@ interface moderna e responsiva.
 - baixa assíncrona de estoque por RabbitMQ;
 - tratamento padronizado de validações e erros;
 - logs estruturados, health checks e Swagger;
-- análise consultiva de notas com Google Gemini;
+- análise consultiva de notas com Groq e GPT-OSS;
 - fallback seguro: indisponibilidade da IA não bloqueia o sistema.
 
 ## Capturas de tela
@@ -88,7 +88,7 @@ flowchart LR
     MQ -->|Baixa de estoque| INV
     INV --> IDB[(inventory_db)]
     BILL --> BDB[(billing_db)]
-    BILL -.->|Análise opcional| GEMINI[Google Gemini]
+    BILL -.->|Análise opcional| GROQ[Groq API]
 ```
 
 | Camada | Tecnologias |
@@ -98,7 +98,7 @@ flowchart LR
 | Persistência | Entity Framework Core 9, Npgsql e PostgreSQL 16 |
 | Mensageria | RabbitMQ e MassTransit |
 | Resiliência | Polly, health checks, timeout e fallback |
-| IA | Gemini API com resposta estruturada por JSON Schema |
+| IA | Groq API com GPT-OSS e resposta estruturada por JSON Schema |
 
 Mais detalhes estão em [`detalhamento_tecnico.md`](detalhamento_tecnico.md).
 
@@ -142,10 +142,11 @@ Acesse **http://localhost:4200**.
 A aplicação funciona normalmente sem IA. Para habilitar a análise, defina a
 chave apenas como variável de ambiente **antes** de subir o Billing Service.
 
-No PowerShell:
+Crie um arquivo local a partir do exemplo:
 
 ```powershell
-$env:GEMINI_API_KEY = "sua-chave-do-google-ai-studio"
+Copy-Item .env.example .env
+# Abra .env e preencha GROQ_API_KEY com a sua chave.
 docker compose up --build -d billing-service
 ```
 
@@ -237,7 +238,7 @@ Os scripts e o baseline de qualidade estão documentados em
 - nunca versione chaves, tokens ou arquivos `.env` com credenciais;
 - os usuários e senhas do Compose são apenas para desenvolvimento local;
 - a análise de IA é consultiva e não substitui validação humana;
-- nome do cliente e observações da nota não são enviados ao Gemini.
+- nome do cliente e observações da nota não são enviados à Groq.
 
 ## Próximas evoluções
 

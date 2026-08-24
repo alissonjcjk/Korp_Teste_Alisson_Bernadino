@@ -129,7 +129,7 @@ export class InvoicesPageComponent implements OnInit {
           summary: 'Não foi possível acessar a análise inteligente. A impressão continua disponível normalmente.',
           risks: [],
           suggestions: [],
-          provider: 'Google Gemini',
+          provider: 'Groq',
           analyzedAt: new Date().toISOString()
         });
         this.analyzingId.set(null);

@@ -32,7 +32,7 @@ flowchart LR
     MQ -->|Consumer| INV
     INV --> IDB[(inventory_db<br/>PostgreSQL)]
     BILL --> BDB[(billing_db<br/>PostgreSQL)]
-    BILL -.->|Análise opcional| AI[Google Gemini]
+    BILL -.->|Análise opcional| AI[Groq API]
 ```
 
 ### Responsabilidades
@@ -44,7 +44,7 @@ flowchart LR
 | Billing Service | Criação, consulta, totalização, fechamento e análise das notas fiscais |
 | PostgreSQL | Persistência isolada de cada contexto de negócio |
 | RabbitMQ + MassTransit | Comunicação assíncrona do evento de impressão |
-| Google Gemini | Análise opcional e consultiva dos dados da nota |
+| Groq + GPT-OSS | Análise opcional e consultiva dos dados da nota |
 
 ## 2. Frontend Angular
 
@@ -181,8 +181,8 @@ consumer exigem as melhorias listadas na seção 10.
 ## 7. Inteligência Artificial
 
 A ação **Analisar com IA** é independente da impressão. O Billing Service chama
-o Google Gemini com o modelo configurado, atualmente
-`gemini-3.5-flash-lite`, e solicita uma resposta estruturada por JSON Schema.
+a Groq API com o modelo configurado, atualmente `openai/gpt-oss-20b`, e solicita
+uma resposta estruturada por JSON Schema em modo estrito.
 
 A análise contém:
 
@@ -282,9 +282,7 @@ garantias ainda não implementadas:
 3. garantir recuperação ou compensação quando a nota é fechada, mas a baixa
    assíncrona falha;
 4. adicionar testes reais de concorrência e integração com PostgreSQL/RabbitMQ;
-5. executar a chamada real de IA com um projeto Google autorizado — o fallback
-   já está funcional, mas o projeto usado na validação retornou
-   `PERMISSION_DENIED`.
+5. acompanhar limites e eventuais mudanças de modelos do plano gratuito da Groq.
 
 Esses pontos não impedem a demonstração dos fluxos principais, mas são os
 próximos passos recomendados antes de um cenário de produção.

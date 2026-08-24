@@ -20,7 +20,7 @@ public sealed record InvoiceAiAnalysisResponse
         Summary = "A análise inteligente está temporariamente indisponível. A nota fiscal e a impressão continuam funcionando normalmente.",
         Risks = [],
         Suggestions = [],
-        Provider = "Google Gemini",
+        Provider = "Groq",
         AnalyzedAt = DateTimeOffset.UtcNow
     };
 }
