@@ -40,41 +40,52 @@ interface moderna e responsiva.
 
 ## Capturas de tela
 
-> Os espaços abaixo estão preparados para receber as imagens da aplicação em
-> execução. As instruções para adicioná-las estão em
-> [`docs/images/README.md`](docs/images/README.md).
+### Página inicial
 
-### Produtos
+![Página inicial do Korp ERP](assets/pagina-inicial1.png)
 
-> 🖼️ **Espaço reservado:** listagem e gerenciamento de produtos.
+![Diferenciais apresentados na página inicial](assets/pagina-inicial2.png)
 
-<!-- Quando a imagem existir, remova este comentário e use:
-![Tela de produtos do Korp ERP](docs/images/produtos.png)
--->
+### Gestão de produtos
 
-### Cadastro de produto
+![Listagem e indicadores de produtos](assets/pagina-produtos.png)
 
-> 🖼️ **Espaço reservado:** modal de criação ou edição de produto.
+<p align="center">
+  <img src="assets/modal1.png" width="49%" alt="Modal de cadastro de produto">
+  <img src="assets/modal2.png" width="49%" alt="Modal de edição de produto">
+</p>
+<p align="center">
+  <sub>Cadastro de um novo produto e edição segura dos dados permitidos.</sub>
+</p>
 
-<!-- Quando a imagem existir, remova este comentário e use:
-![Cadastro de produto no Korp ERP](docs/images/cadastro-produto.png)
--->
+<p align="center">
+  <img src="assets/modal3.png" width="52%" alt="Confirmação para exclusão de produto">
+</p>
+<p align="center">
+  <sub>Confirmação explícita antes da exclusão de um produto.</sub>
+</p>
 
-### Notas fiscais
+### Gestão de notas fiscais
 
-> 🖼️ **Espaço reservado:** listagem e emissão de notas fiscais.
+![Listagem, indicadores e ações das notas fiscais](assets/pagina-notas.png)
 
-<!-- Quando a imagem existir, remova este comentário e use:
-![Tela de notas fiscais do Korp ERP](docs/images/notas-fiscais.png)
--->
+![Criação de nota fiscal com múltiplos itens](assets/modal4.png)
 
 ### Análise com Inteligência Artificial
 
-> 🖼️ **Espaço reservado:** modal com resumo, riscos e sugestões da IA.
+<p align="center">
+  <img src="assets/modalia.png" width="54%" alt="Análise inteligente concluída com risco baixo">
+</p>
+<p align="center">
+  <sub>Análise consultiva concluída pela Groq com resposta estruturada.</sub>
+</p>
 
-<!-- Quando a imagem existir, remova este comentário e use:
-![Análise de nota fiscal com IA](docs/images/analise-ia.png)
--->
+<p align="center">
+  <img src="assets/modal5.png" width="54%" alt="Fallback quando o provedor de inteligência artificial está indisponível">
+</p>
+<p align="center">
+  <sub>Fallback resiliente: a indisponibilidade da IA não bloqueia a aplicação.</sub>
+</p>
 
 ## Arquitetura
 
@@ -208,8 +219,8 @@ npm run build
 npm run test:ci
 ```
 
-Os scripts e o baseline de qualidade estão documentados em
-[`docs/testing.md`](docs/testing.md).
+Esses comandos validam a compilação de produção e as suítes automatizadas dos
+microsserviços e do frontend.
 
 ## Estrutura do repositório
 
@@ -231,7 +242,6 @@ Os scripts e o baseline de qualidade estão documentados em
 - [Detalhamento técnico](detalhamento_tecnico.md)
 - [Erros e validações](docs/api-errors-and-validation.md)
 - [Análise de notas com IA](docs/ai-invoice-analysis.md)
-- [Testes e baseline](docs/testing.md)
 
 ## Observações de segurança
 
