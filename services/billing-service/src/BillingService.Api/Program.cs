@@ -63,25 +63,25 @@ builder.Services.AddHttpClient<IInventoryClient, InventoryClient>(client =>
 // ── Application Services ─────────────────────────────────────────────────────
 builder.Services.AddScoped<IInvoiceService, InvoiceService>();
 
-// ── Análise consultiva de notas fiscais com Gemini ───────────────────────────
-builder.Services.Configure<GeminiOptions>(options =>
+// ── Análise consultiva de notas fiscais com Groq ─────────────────────────────
+builder.Services.Configure<GroqOptions>(options =>
 {
-    builder.Configuration.GetSection(GeminiOptions.SectionName).Bind(options);
+    builder.Configuration.GetSection(GroqOptions.SectionName).Bind(options);
 
-    var environmentApiKey = builder.Configuration["GEMINI_API_KEY"];
+    var environmentApiKey = builder.Configuration["GROQ_API_KEY"];
     if (!string.IsNullOrWhiteSpace(environmentApiKey))
         options.ApiKey = environmentApiKey;
 });
 
-var geminiTimeoutSeconds = Math.Clamp(
-    builder.Configuration.GetValue<int?>("Gemini:TimeoutSeconds") ?? 8,
+var groqTimeoutSeconds = Math.Clamp(
+    builder.Configuration.GetValue<int?>("Groq:TimeoutSeconds") ?? 8,
     3,
     30);
 
-builder.Services.AddHttpClient<IInvoiceAiAnalyzer, GeminiInvoiceAiAnalyzer>(client =>
+builder.Services.AddHttpClient<IInvoiceAiAnalyzer, GroqInvoiceAiAnalyzer>(client =>
 {
-    client.BaseAddress = new Uri("https://generativelanguage.googleapis.com/v1beta/");
-    client.Timeout = TimeSpan.FromSeconds(geminiTimeoutSeconds);
+    client.BaseAddress = new Uri("https://api.groq.com/openai/v1/");
+    client.Timeout = TimeSpan.FromSeconds(groqTimeoutSeconds);
 });
 
 // ── MassTransit (RabbitMQ + EF Core Outbox) ────────────────────────────────
