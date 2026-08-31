@@ -92,11 +92,14 @@ interface moderna e responsiva.
 ```mermaid
 flowchart LR
     U[Usuário] --> WEB[Angular 19]
-    WEB -->|Produtos| INV[Inventory Service]
-    WEB -->|Notas| BILL[Billing Service]
+    WEB -->|HTTP / API| GW[API Gateway]
+    GW -->|Produtos| INV[Inventory Service]
+    GW -->|Notas fiscais| BILL[Billing Service]
     BILL -->|Consulta HTTP| INV
-    BILL -->|Evento de impressão| MQ[(RabbitMQ)]
+    BILL -->|Persistência atômica| OUTBOX[(Billing Outbox)]
+    OUTBOX -->|Evento de impressão| MQ[(RabbitMQ)]
     MQ -->|Baixa de estoque| INV
+    INV -.->|Falha no processamento| ERRORQ[(Fila de erro)]
     INV --> IDB[(inventory_db)]
     BILL --> BDB[(billing_db)]
     BILL -.->|Análise opcional| GROQ[Groq API]
