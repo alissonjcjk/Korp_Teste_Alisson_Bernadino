@@ -89,6 +89,37 @@ services:
       - "5002:8080"
     networks:
       - korp-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # ── API Gateway ─────────────────────────────────────────────────────────────
+  api-gateway:
+    build:
+      context: ./services/api-gateway
+      dockerfile: Dockerfile
+    container_name: korp-api-gateway
+    restart: unless-stopped
+    depends_on:
+      inventory-service:
+        condition: service_healthy
+      billing-service:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Docker
+    ports:
+      - "5000:8080"
+    networks:
+      - korp-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
 
   # ── Angular Frontend ─────────────────────────────────────────────────────────
   # frontend:
@@ -98,8 +129,7 @@ services:
   #   container_name: korp-frontend
   #   restart: unless-stopped
   #   depends_on:
-  #     - billing-service
-  #     - inventory-service
+  #     - api-gateway
   #   ports:
   #     - "4200:80"
   #   networks:

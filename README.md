@@ -108,7 +108,7 @@ flowchart LR
 | Camada | Tecnologias |
 | --- | --- |
 | Frontend | Angular 19, RxJS, Reactive Forms, Signals e Tailwind CSS |
-| APIs | ASP.NET Core 9, FluentValidation, Serilog e Swagger |
+| Gateway e APIs | YARP, ASP.NET Core 9, FluentValidation, Serilog e Swagger |
 | Persistência | Entity Framework Core 9, Npgsql e PostgreSQL 16 |
 | Mensageria | RabbitMQ e MassTransit |
 | Resiliência | Polly, health checks, timeout e fallback |
@@ -138,8 +138,8 @@ cd Korp_Teste_Alisson_Bernadino
 docker compose up --build -d
 ```
 
-O Compose inicia PostgreSQL, RabbitMQ, Inventory Service e Billing Service. As
-migrations são aplicadas automaticamente na inicialização.
+O Compose inicia PostgreSQL, RabbitMQ, os dois microsserviços e o API Gateway.
+As migrations são aplicadas automaticamente na inicialização.
 
 ### 3. Inicie o frontend
 
@@ -172,9 +172,11 @@ Não salve nem publique a chave no repositório. Consulte a
 | Recurso | Endereço |
 | --- | --- |
 | Aplicação Angular | http://localhost:4200 |
-| Inventory API + Swagger | http://localhost:5001 |
-| Billing API + Swagger | http://localhost:5002 |
+| API Gateway | http://localhost:5000 |
+| Inventory API + Swagger (acesso direto) | http://localhost:5001 |
+| Billing API + Swagger (acesso direto) | http://localhost:5002 |
 | RabbitMQ Management | http://localhost:15672 |
+| Health — Gateway | http://localhost:5000/health |
 | Health — Inventory | http://localhost:5001/health |
 | Health — Billing | http://localhost:5002/health |
 
@@ -186,22 +188,22 @@ O acesso local padrão ao RabbitMQ Management é `guest` / `guest`.
 
 | Método | Endpoint | Descrição |
 | --- | --- | --- |
-| `GET` | `/api/products?search=` | Lista e pesquisa produtos |
-| `GET` | `/api/products/{id}` | Consulta um produto |
-| `POST` | `/api/products` | Cadastra um produto |
-| `PUT` | `/api/products/{id}` | Atualiza descrição e unidade |
-| `DELETE` | `/api/products/{id}` | Exclui um produto |
-| `POST` | `/api/products/{id}/deduct-stock` | Realiza baixa de estoque |
+| `GET` | `/api/inventory/products?search=` | Lista e pesquisa produtos |
+| `GET` | `/api/inventory/products/{id}` | Consulta um produto |
+| `POST` | `/api/inventory/products` | Cadastra um produto |
+| `PUT` | `/api/inventory/products/{id}` | Atualiza descrição e unidade |
+| `DELETE` | `/api/inventory/products/{id}` | Exclui um produto |
+| `POST` | `/api/inventory/products/{id}/deduct-stock` | Realiza baixa de estoque |
 
 ### Notas fiscais
 
 | Método | Endpoint | Descrição |
 | --- | --- | --- |
-| `GET` | `/api/invoices` | Lista notas fiscais |
-| `GET` | `/api/invoices/{id}` | Consulta uma nota |
-| `POST` | `/api/invoices` | Cria uma nota |
-| `POST` | `/api/invoices/{id}/print` | Imprime e fecha a nota |
-| `POST` | `/api/invoices/{id}/ai-analysis` | Solicita análise consultiva por IA |
+| `GET` | `/api/billing/invoices` | Lista notas fiscais |
+| `GET` | `/api/billing/invoices/{id}` | Consulta uma nota |
+| `POST` | `/api/billing/invoices` | Cria uma nota |
+| `POST` | `/api/billing/invoices/{id}/print` | Imprime e fecha a nota |
+| `POST` | `/api/billing/invoices/{id}/ai-analysis` | Solicita análise consultiva por IA |
 
 ## Testes
 
@@ -233,6 +235,7 @@ microsserviços e do frontend.
 ├── frontend/korp-erp-frontend/  # Aplicação Angular
 ├── infra/postgres/              # Inicialização dos bancos
 ├── services/
+│   ├── api-gateway/             # Entrada única e roteamento com YARP
 │   ├── billing-service/         # Notas fiscais e integração de IA
 │   └── inventory-service/       # Produtos e estoque
 ├── docker-compose.yml
