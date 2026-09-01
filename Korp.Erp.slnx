@@ -1,4 +1,7 @@
 <Solution>
+  <Folder Name="/Gateway/">
+    <Project Path="services/api-gateway/src/ApiGateway/ApiGateway.csproj" />
+  </Folder>
   <Folder Name="/Inventory/">
     <Project Path="services/inventory-service/src/InventoryService.Api/InventoryService.Api.csproj" />
     <Project Path="services/inventory-service/tests/InventoryService.Tests/InventoryService.Tests.csproj" />

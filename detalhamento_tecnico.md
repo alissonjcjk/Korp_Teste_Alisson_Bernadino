@@ -25,8 +25,9 @@ nota publica um evento no RabbitMQ para que a baixa de estoque seja processada.
 
 ```mermaid
 flowchart LR
-    UI[Angular 19] -->|HTTP| INV[Inventory Service<br/>ASP.NET Core 9]
-    UI -->|HTTP| BILL[Billing Service<br/>ASP.NET Core 9]
+    UI[Angular 19] -->|HTTP| GW[API Gateway<br/>YARP]
+    GW -->|/api/inventory| INV[Inventory Service<br/>ASP.NET Core 9]
+    GW -->|/api/billing| BILL[Billing Service<br/>ASP.NET Core 9]
     BILL -->|Consulta de produtos| INV
     BILL -->|InvoicePrintedEvent| MQ[(RabbitMQ)]
     MQ -->|Consumer| INV
@@ -40,6 +41,7 @@ flowchart LR
 | Componente | Responsabilidade |
 | --- | --- |
 | Angular | Cadastro e consulta de produtos, criação e impressão de notas e análise consultiva por IA |
+| API Gateway | Ponto único de entrada HTTP, roteamento e isolamento dos endereços internos dos serviços |
 | Inventory Service | Catálogo de produtos, saldo, baixa e concorrência de estoque |
 | Billing Service | Criação, consulta, totalização, fechamento e análise das notas fiscais |
 | PostgreSQL | Persistência isolada de cada contexto de negócio |
@@ -86,6 +88,7 @@ DTOs, validadores, serviços de aplicação, modelos e acesso a dados.
 | Tecnologia | Uso |
 | --- | --- |
 | ASP.NET Core 9 | Web APIs, middleware, health checks e injeção de dependência |
+| YARP | Reverse proxy e roteamento do gateway para os microsserviços |
 | Entity Framework Core 9 | Mapeamento, consultas, transações e migrations |
 | Npgsql | Provider PostgreSQL e convenção `snake_case` |
 | FluentValidation | Regras de entrada desacopladas dos controllers |
